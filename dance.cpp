@@ -28,7 +28,17 @@ int width = 1280;
 int height = 720;
 Mat image;
 
+Mat background_image;
+vector<int[4]> patterns;
 
+// read dance patterns from the file
+void read_patterns(const char* file_name);
+
+// background subtraction
+void background_subtraction();
+
+// plane detection
+void plane_detection();
 
 // a useful function for displaying your coordinate system
 void drawAxes(float length)
