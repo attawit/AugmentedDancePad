@@ -1,0 +1,21 @@
+Camera_Matrix 
+1056.12 0 543.819 
+0 1056.62 341.849 
+0 0 1 
+
+Distortion_Coefficients 
+0.122125 -0.325492 -0.00316965 0.000512431 
+
+Horizontal_Field_Of_View 54.162
+Vertical_Field_Of_View 37.6288
+Focal_Length 0.977885
+Principal_Point [0.503536, 0.47479]
+Aspect_Ratio 1.00048 (fx: 1056.12 fy: 1056.62)
+k1 0.122125
+k2 -0.325492
+p1 -0.00316965
+p2 0.000512431
+
+Sum_Reprojection_Error 10.533
+Avg_Reprojection_Error 0.148135
+
