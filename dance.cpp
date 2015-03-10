@@ -115,13 +115,17 @@ void drawAxes(float length)
 }
 
 void overlay(Mat& foreground, Mat& background, int x, int y, int width, int height){
+    //cout<<foreground.channels()<<endl;
     for (int i = y; i < y+height; i++){
         for(int j = x; j < x+width; j++){
             double opacity =((double)foreground.data[(i-y) * foreground.step + (j-x) * foreground.channels() + 3])/ 255.;
-            for(int c = 0; opacity > 0 && c < background.channels(); ++c)
+            //cout<<opacity<<endl;
+
+            for(int c = 0; opacity < 0.999 && c < background.channels(); ++c)
             {
                 unsigned char foregroundPx = foreground.data[(i-y) * foreground.step + (j-x) * foreground.channels() + c];
                 unsigned char backgroundPx = background.data[i * background.step +  j * background.channels() + c];
+                
                 background.data[i*background.step + background.channels()*j + c] = backgroundPx * (1.-opacity) + foregroundPx * opacity;
             }
         }
