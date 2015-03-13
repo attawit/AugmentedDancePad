@@ -23,7 +23,7 @@
 #define PATTERN_COL_RATIO 0.25
 #define PATTERN_TIME_UNIT 0.25
 #define ARROW_SIDE 40.0
-
+#define BLOCK_SIZE 50
 
 using namespace cv;
 using namespace std;
@@ -39,7 +39,7 @@ cv::BackgroundSubtractorMOG2 bgs;
 bool background_image_flag = false;
 
 //parameters for calibration
-bool plane_detection_flag = false;
+bool plane_detection_flag = true;
 vector<Point3f>  objectPoints;
 Size boardSize;
 float squareSize = 5;
@@ -96,7 +96,7 @@ void drawAxes(float length)
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) ;
     glDisable(GL_LIGHTING) ;
-    
+    glTranslatef(.0f,-squareSize,0.0f);
     glBegin(GL_LINES) ;
     glColor3f(1,0,0) ;
     glVertex3f(0,0,0) ;
@@ -211,6 +211,63 @@ void showCorners()
     glPopMatrix();
 }
 
+void drawDancePad()
+{
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
+    GLUquadricObj *qobj = gluNewQuadric();
+    glPushMatrix();
+
+    //left   
+    glTranslatef(squareSize*10, 0, -squareSize*2);
+    glColor4f(1.0, 153.0/255.0, 153.0/255.0,0.5); 
+    glBegin(GL_POLYGON); 
+    glVertex3f(0.0, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, BLOCK_SIZE); 
+    glVertex3f(0, 0.0, BLOCK_SIZE); 
+    glEnd(); 
+    
+    //right
+    glTranslatef(2*BLOCK_SIZE, 0, 0);
+    glColor4f(204.0/255.0, 1.0, 153.0/255.0,0.5); 
+    glBegin(GL_POLYGON); 
+    glVertex3f(0.0, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, BLOCK_SIZE); 
+    glVertex3f(0, 0.0, BLOCK_SIZE); 
+    glEnd(); 
+    //up
+    glTranslatef(-BLOCK_SIZE, 0, BLOCK_SIZE);
+    glColor4f(1.0, 1.0, 153.0/255.0,0.5); 
+    glBegin(GL_POLYGON); 
+    glVertex3f(0.0, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, BLOCK_SIZE); 
+    glVertex3f(0, 0.0, BLOCK_SIZE); 
+    glEnd();
+    //down
+    glTranslatef(0, 0, -2*BLOCK_SIZE);
+    glColor4f(153.0/255.0, 204.0/255.0, 1.0,0.5); 
+    glBegin(GL_POLYGON); 
+    glVertex3f(0.0, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, 0.0); 
+    glVertex3f(BLOCK_SIZE, 0.0, BLOCK_SIZE); 
+    glVertex3f(0, 0.0, BLOCK_SIZE); 
+    glEnd();
+
+    GLdouble tx, ty, tz;
+    GLdouble _modelview[16], _projection[16];
+    GLint _viewport[4];
+    glGetDoublev(GL_MODELVIEW, _modelview);
+    glGetDoublev(GL_PROJECTION, _projection);
+    glGetIntegerv(GL_VIEWPORT, _viewport);
+    gluProject(0, 0, 0, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    cout<<"tx "<<tx<<" ty "<<ty<<" tz "<<tz<<endl;
+    glPopMatrix();
+}
+
 void display()
 {
     // clear the window
@@ -226,16 +283,35 @@ void display()
     if(background_image_flag){
         cvtColor( background_image, tempimage, CV_GRAY2BGR );
         //flip(tempimage,tempimage, -1);
-
     }
         //flip(background_image, tempimage, 0);
     
     
     glDisable(GL_DEPTH_TEST);
-    glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //alpha blend test start
+    if(background_image_flag){
+        
+        Mat overlay_test ;//=  Mat::zeros(image.size(), CV_8UC3);
+        Mat chans[3]; //
+        split(image,chans);
+        Mat newchans[4];
+        newchans[0] = chans[0];
+        newchans[1] = chans[1];
+        newchans[2] = chans[2];
+        //Mat temp;
+        //cv::threshold(background_image,temp,50.0f,255,CV_THRESH_BINARY);
+        //cout<<temp<<endl;
+        newchans[3] = Mat::ones(image.rows, image.cols, CV_8UC1);///background_image;
+        merge(newchans,4,overlay_test);
+        glDrawPixels( overlay_test.size().width, overlay_test.size().height, GL_BGRA, GL_UNSIGNED_BYTE, overlay_test.ptr() );
+        
+    }else{
+        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    }
+    //alpha blend test end
     glEnable(GL_DEPTH_TEST);
-    
-    
+
     
     //////////////////////////////////////////////////////////////////////////////////
     // Here, set up new parameters to render a scene viewed from the camera.
@@ -262,10 +338,6 @@ void display()
     }
     gluLookAt(0, 0, 0, 0, 0, -5, 0, 1, 0);  
 
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-
-    
     
     gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
     
@@ -282,13 +354,41 @@ void display()
       glRotatef(90, -1.0, 0.0, 0.0);
       
       drawAxes(squareSize);
-      showCorners();
+      //showCorners();
+      drawDancePad();
 
     glPopMatrix();
     //glClear(GL_DEPTH_BUFFER_BIT);
   }
     
-    // show the rendering on the screen
+
+    glDisable(GL_DEPTH_TEST);
+    //glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //alpha blend test start
+    if(background_image_flag){
+        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+        Mat overlay_test ;//=  Mat::zeros(image.size(), CV_8UC3);
+        Mat chans[3]; //
+        Mat temp;
+        split(image,chans);
+        Mat newchans[4];
+        newchans[0] = chans[0];
+        newchans[1] = chans[1];
+        newchans[2] = chans[2];
+        //cv::threshold(background_image,temp,50.0f,1,CV_THRESH_BINARY);
+        temp = cv::Scalar::all(255) - background_image;
+        newchans[3] = temp;//Mat::zeros(image.rows, image.cols, CV_8UC1);///background_image;
+        merge(newchans,4,overlay_test);
+        glDrawPixels( overlay_test.size().width, overlay_test.size().height, GL_BGRA, GL_UNSIGNED_BYTE, overlay_test.ptr() );
+   
+    }else{
+        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    }
+    //alpha blend test end
+    glEnable(GL_DEPTH_TEST);
+
+
+
     glutSwapBuffers();
     
     // post the next redisplay
@@ -329,6 +429,12 @@ void keyboard( unsigned char key, int x, int y )
             else
                 background_image_flag = true;
             break;
+        case 'c':
+            if(plane_detection_flag)
+                plane_detection_flag = false;
+            else
+                plane_detection_flag = true;
+            break;
         default:
             break;
     }
@@ -345,7 +451,9 @@ void idle()
     }
     
     background_subtraction();
-    plane_detection();
+    if(plane_detection_flag){
+       plane_detection(); 
+    }
     
     if (start_play) {
         start_pattern(image);
@@ -543,7 +651,7 @@ int main( int argc, char **argv )
     
     
     //initialize background subtractor
-    bgs.nmixtures = 3;
+    bgs.nmixtures = 5;
     bgs.history = 1000;
     bgs.varThresholdGen = 15;
     bgs.bShadowDetection = true;
@@ -572,8 +680,8 @@ int main( int argc, char **argv )
     glClearColor(0.0f, 0.0f, 0.0f, 1);
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1.0f);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
+    // glEnable(GL_LIGHTING);
+    // glEnable(GL_LIGHT0);
     glDisable(GL_COLOR_MATERIAL);
     
     
