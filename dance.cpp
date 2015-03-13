@@ -7,7 +7,7 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <opencv2/opencv.hpp>
-
+//#include "audio.h"
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -16,19 +16,25 @@
 #include <GL/glut.h>
 #endif
 
+#include <string>
+#include <stdlib.h>
 #include <cstdio>
 #include <fstream>
+#include <thread>
+
 
 #define NUM_CELLS 4
 #define PATTERN_COL_RATIO 0.25
-#define PATTERN_TIME_UNIT 0.25
+#define PATTERN_TIME_UNIT 0.15
 #define ARROW_SIDE 40.0
+#define PATTERN_FILE "pattern.txt"
+#define MUSIC_FILE "music.wav"
 #define BLOCK_SIZE 50
 
 using namespace cv;
 using namespace std;
 
-VideoCapture *cap = new VideoCapture(0);
+VideoCapture *cap;
 int width = 1280;
 int height = 720;
 Mat image; //original image read in from video stream
@@ -60,16 +66,21 @@ float timer_start = 0.0;
 
 // pattern display
 Mat arrow_left, arrow_right, arrow_up, arrow_down;
-double start_line_padding = 50.0;
+double start_line_padding = 100.0;
 double finish_line_padding = 50.0;
 
 
 // boolean flag
 bool start_play = false;
 
+thread music_thread;
+thread::id music_thread_id;
 
 // read dance patterns from the file
-void read_patterns(const char* file_name);
+void readPatterns(const char* file_name);
+
+// read arrow images
+void readArrows();
 
 // background subtraction
 void background_subtraction();
@@ -88,6 +99,12 @@ void overlay(Mat& foreground, Mat& background, double x, double y, double width,
 
 //read in camera calibration parameters
 void readParameters(const char* fileName);
+
+void play_music();
+
+void play_music(){
+    system("afplay ./music/jmww/music.wav");
+}
 
 // a useful function for displaying your coordinate system
 void drawAxes(float length)
@@ -141,10 +158,10 @@ void start_pattern(Mat& image){
     line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), Scalar(255, 0, 0));
     
     float time_now = timer();
-//    cout << "time now: " << time_now << endl;
+    cout << "time now: " << time_now << endl;
     // for each line of the pattern
     for (int i = 0; i < patterns.size(); i++) {
-        float distance = (time_now - i * PATTERN_TIME_UNIT) * (ARROW_SIDE*4);
+        float distance = (time_now - i * PATTERN_TIME_UNIT) * (ARROW_SIDE*10);
         
         // if it's not the turn to show up for the rest, just break the loop
         if (distance < 0)
@@ -156,7 +173,6 @@ void start_pattern(Mat& image){
         }
         
         if (patterns[i][0] == 1) {
-            // because it's the unflip image, we use arrow_right to indicate the arrow to the left
             overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
@@ -169,12 +185,13 @@ void start_pattern(Mat& image){
         }
         
         if (patterns[i][3] == 1) {
-            // because it's the unflip image, we use arrow_left to indicate the arrow to the right
             overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
     }
 }
+
+
 
 void initialiseOpenGL(){
   glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -422,6 +439,9 @@ void keyboard( unsigned char key, int x, int y )
             start_play = !start_play;
             // adjust the the base line of the timer
             timer_start = float(t)/CLOCKS_PER_SEC;
+            music_thread = thread(play_music);
+            music_thread_id = music_thread.get_id();
+            cout << music_thread_id << endl;
             break;
         case 'b':
             if(background_image_flag)
@@ -460,8 +480,17 @@ void idle()
     }
 }
 
-void read_patterns(const char* file_name){
-    fstream infile(file_name, ios_base::in);
+void readPatterns(const char* dir){
+    char file[100];
+    strcpy(file,dir); // copy string one into the result.
+    strcat(file,"/");
+    strcat(file,PATTERN_FILE);
+    cout << "opening pattern file from: " << file << endl;
+    fstream infile(file, ios_base::in);
+    if (!infile) {
+        cout << "No pattern file specified in the music path." << endl;
+        exit(0);
+    }
     string temp;
     while (getline(infile, temp))
     {
@@ -481,6 +510,18 @@ void read_patterns(const char* file_name){
     }
 
     
+}
+
+void readArrows(Mat& arrow_up, Mat& arrow_down, Mat& arrow_left, Mat&arrow_right){
+    Mat arrow_up_tmp, arrow_down_tmp, arrow_left_tmp, arrow_right_tmp;
+    arrow_left_tmp = cvLoadImage("./image/arrow_left.png", CV_LOAD_IMAGE_COLOR);
+    arrow_right_tmp = cvLoadImage("./image/arrow_right.png", CV_LOAD_IMAGE_COLOR);
+    arrow_up_tmp = cvLoadImage("./image/arrow_up.png", CV_LOAD_IMAGE_COLOR);
+    arrow_down_tmp = cvLoadImage("./image/arrow_down.png", CV_LOAD_IMAGE_COLOR);
+    resize(arrow_left_tmp, arrow_left, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_right_tmp, arrow_right, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_up_tmp, arrow_up, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_down_tmp, arrow_down, Size(ARROW_SIDE, ARROW_SIDE));
 }
 
 
@@ -568,7 +609,7 @@ void plane_detection(){
     }
 }
 
-void readParameters(const char* fileName){
+void readParameters(const char* fileName ){
   ifstream inFile;
   inFile.open(fileName);
   if(!inFile.is_open()){
@@ -612,20 +653,17 @@ int main( int argc, char **argv )
     boardSize.height = 6;
     boardSize.width = 8;
     
-    if ( argc == 2 ) {
+    if ( argc == 3 ) {
         // start video capture from camera
-        cap = new cv::VideoCapture(0);
-    } else if ( argc == 3 ) {
-        // start video capture from file
-        cap = new cv::VideoCapture(argv[1]);
+        cap = new VideoCapture(0);
     } else {
-        fprintf( stderr, "usage: %s [<filename>]\n", argv[0] );
+        fprintf( stderr, "usage: %s <calibration file> <music directory>\n", argv[0] );
         return 1;
     }
     
     // check that video is opened
     if ( cap == NULL || !cap->isOpened() ) {
-        fprintf( stderr, "could not start video capture\n" );
+        fprintf( stderr, "Could not start video capture\n" );
         return 1;
     }
     
@@ -638,17 +676,11 @@ int main( int argc, char **argv )
     width = w ? w : width;
     height = h ? h : height;
     
-    read_patterns("./patterns.txt");
-    Mat arrow_up_tmp, arrow_down_tmp, arrow_left_tmp, arrow_right_tmp;
-    arrow_left_tmp = imread("./image/arrow_left.png", CV_LOAD_IMAGE_COLOR);
-    arrow_right_tmp = imread("./image/arrow_right.png", CV_LOAD_IMAGE_COLOR);
-    arrow_up_tmp = imread("./image/arrow_up.png", CV_LOAD_IMAGE_COLOR);
-    arrow_down_tmp = imread("./image/arrow_down.png", CV_LOAD_IMAGE_COLOR);
-    resize(arrow_left_tmp, arrow_left, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_right_tmp, arrow_right, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_up_tmp, arrow_up, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_down_tmp, arrow_down, Size(ARROW_SIDE, ARROW_SIDE));
+    //initialize pattern reading
+    readPatterns(argv[2]);
     
+    //read arrow images
+    readArrows(arrow_up, arrow_down, arrow_left, arrow_right);
     
     //initialize background subtractor
     bgs.nmixtures = 5;
@@ -685,9 +717,6 @@ int main( int argc, char **argv )
     glDisable(GL_COLOR_MATERIAL);
     
     
-    
-    
-    
     glutDisplayFunc( display );
     glutReshapeFunc( reshape );
     glutMouseFunc( mouse );
@@ -697,6 +726,6 @@ int main( int argc, char **argv )
     // start GUI loop
     glutMainLoop();
     
-    delete cap;
     return 0;
 }
+
