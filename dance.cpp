@@ -38,6 +38,7 @@ VideoCapture *cap;
 int width = 1280;
 int height = 720;
 Mat image; //original image read in from video stream
+const char snap_name[] = "snapshot.bmp";
 
 //parameters for background substraction
 Mat background_image; 
@@ -72,6 +73,9 @@ double finish_line_padding = 50.0;
 
 // boolean flag
 bool start_play = false;
+
+//ROI of the dance pad's blocks
+Point2f front_bl, front_ur, left_bl, left_ur, right_bl, right_ur, back_bl, back_ur;
 
 thread music_thread;
 thread::id music_thread_id;
@@ -129,6 +133,24 @@ void drawAxes(float length)
     glEnd() ;
     
     glPopAttrib() ;
+}
+
+void snapshot(int windowWidth, int windowHeight, const char* filename){
+  cv::Mat img(height, width, CV_8UC3);
+  //use fast 4-byte alignment (default anyway) if possible
+  glPixelStorei(GL_PACK_ALIGNMENT, (img.step & 3) ? 1 : 4);
+
+  //set length of one complete row in destination data (doesn't need to equal img.cols)
+  glPixelStorei(GL_PACK_ROW_LENGTH, img.step/img.elemSize());
+  glReadPixels(0, 0, img.cols, img.rows, GL_BGR, GL_UNSIGNED_BYTE, img.data);
+  Mat flipped;
+  cv::flip(img, flipped, 0);
+  //imwrite(filename, flipped);
+  IplImage* temp;
+  temp = cvCreateImage(cvSize(flipped.cols, flipped.rows),8,3);
+  IplImage ipltemp = flipped;
+  cvCopy(&ipltemp, temp);
+  cvSaveImage(filename, temp);
 }
 
 void overlay(Mat& foreground, Mat& background, int x, int y, int width, int height){
@@ -274,15 +296,56 @@ void drawDancePad()
     glVertex3f(0, 0.0, BLOCK_SIZE); 
     glEnd();
 
+    glPopMatrix();
+
     GLdouble tx, ty, tz;
     GLdouble _modelview[16], _projection[16];
     GLint _viewport[4];
-    glGetDoublev(GL_MODELVIEW, _modelview);
-    glGetDoublev(GL_PROJECTION, _projection);
+    glGetDoublev(GL_MODELVIEW_MATRIX, _modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, _projection);
     glGetIntegerv(GL_VIEWPORT, _viewport);
-    gluProject(0, 0, 0, _modelview, _projection, _viewport, &tx, &ty, &tz);
-    cout<<"tx "<<tx<<" ty "<<ty<<" tz "<<tz<<endl;
-    glPopMatrix();
+    gluProject(.0, .0, .0, _modelview, _projection, _viewport, &tx, &ty, &tz);
+
+    //ROI of the left block
+    gluProject(squareSize*10, 0, -squareSize*2+BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    left_bl.x = tx;
+    gluProject(squareSize*10, 0, -squareSize*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    left_bl.y = ty;
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2+BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    left_ur.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2+BLOCK_SIZE, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    left_ur.y = ty;
+
+    //ROI of the right block
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    right_bl.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    right_bl.y = ty;
+    gluProject(squareSize*10+BLOCK_SIZE*3, 0, -squareSize*2+BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    right_ur.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE*3, 0, -squareSize*2+BLOCK_SIZE, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    right_ur.y = ty;
+
+    //ROI of the front block
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2-BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    front_bl.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2-BLOCK_SIZE, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    front_bl.y = ty;
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2-BLOCK_SIZE*0.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    front_ur.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    front_ur.y = ty;
+
+    //ROI of the back block
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2+BLOCK_SIZE*1.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    back_bl.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2+BLOCK_SIZE, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    back_bl.y = ty;
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*1.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    back_ur.x = tx;
+    gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
+    back_ur.y = ty;
+
 }
 
 void display()
@@ -316,11 +379,14 @@ void display()
         newchans[0] = chans[0];
         newchans[1] = chans[1];
         newchans[2] = chans[2];
-        //Mat temp;
-        //cv::threshold(background_image,temp,50.0f,255,CV_THRESH_BINARY);
-        //cout<<temp<<endl;
         newchans[3] = Mat::ones(image.rows, image.cols, CV_8UC1);///background_image;
         merge(newchans,4,overlay_test);
+        
+        //show the 2D block ROI position
+        rectangle(overlay_test, left_bl, left_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
+        rectangle(overlay_test, right_bl, right_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
+        rectangle(overlay_test, front_bl, front_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
+        rectangle(overlay_test, back_bl, back_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
         glDrawPixels( overlay_test.size().width, overlay_test.size().height, GL_BGRA, GL_UNSIGNED_BYTE, overlay_test.ptr() );
         
     }else{
@@ -454,6 +520,9 @@ void keyboard( unsigned char key, int x, int y )
                 plane_detection_flag = false;
             else
                 plane_detection_flag = true;
+            break;
+        case 'x':
+            snapshot(image.size().width,image.size().height,snap_name);
             break;
         default:
             break;
@@ -609,7 +678,7 @@ void plane_detection(){
     }
 }
 
-void readParameters(const char* fileName ){
+void readParameters(const char* fileName, Mat& cm, Mat& dc){
   ifstream inFile;
   inFile.open(fileName);
   if(!inFile.is_open()){
@@ -619,24 +688,24 @@ void readParameters(const char* fileName ){
   char buffer[30];
   inFile.getline(buffer,30);
 
-  inFile >> cameraMatrix.at<double>(0,0);
-  inFile >>  cameraMatrix.at<double>(0,1);
-  inFile >>  cameraMatrix.at<double>(0,2);
-  inFile >>  cameraMatrix.at<double>(1,0);
-  inFile >>  cameraMatrix.at<double>(1,1);
-  inFile >>  cameraMatrix.at<double>(1,2);
-  inFile >>  cameraMatrix.at<double>(2,0);
-  inFile >>  cameraMatrix.at<double>(2,1);
-  inFile >>  cameraMatrix.at<double>(2,2);
+  inFile >> cm.at<double>(0,0);
+  inFile >>  cm.at<double>(0,1);
+  inFile >>  cm.at<double>(0,2);
+  inFile >>  cm.at<double>(1,0);
+  inFile >>  cm.at<double>(1,1);
+  inFile >>  cm.at<double>(1,2);
+  inFile >>  cm.at<double>(2,0);
+  inFile >>  cm.at<double>(2,1);
+  inFile >>  cm.at<double>(2,2);
   char buffer2[30];
   inFile.getline(buffer2,30); 
   inFile.getline(buffer2,30); 
   inFile.getline(buffer2,30);
-  inFile >>  distCoeffs.at<double>(0,0);
-  inFile >>  distCoeffs.at<double>(1,0);
-  inFile >>  distCoeffs.at<double>(2,0);
-  inFile >>  distCoeffs.at<double>(3,0);
-  inFile >>  distCoeffs.at<double>(4,0);
+  inFile >>  dc.at<double>(0,0);
+  inFile >>  dc.at<double>(1,0);
+  inFile >>  dc.at<double>(2,0);
+  inFile >>  dc.at<double>(3,0);
+  inFile >>  dc.at<double>(4,0);
 }
 
 
@@ -690,7 +759,7 @@ int main( int argc, char **argv )
     bgs.nShadowDetection = 0;
     bgs.fTau = 0.5;
     
-    readParameters(argv[1]);//read in camera calibration parameters
+    readParameters(argv[1], cameraMatrix, distCoeffs);//read in camera calibration parameters
     for( int i = 0; i < boardSize.height; ++i )
         for( int j = 0; j < boardSize.width; ++j )
             objectPoints.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
