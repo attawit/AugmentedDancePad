@@ -3,36 +3,22 @@
 
 // adapt the include statements for your system:
 
-#include "background_segm.hpp"
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <opencv2/opencv.hpp>
-//#include "audio.h"
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#include <GL/gl.h>
-#include <GL/glut.h>
-#endif
-
 #include <string>
 #include <stdlib.h>
 #include <cstdio>
 #include <fstream>
 #include <thread>
+#include "helper.h"
 
-
-#define NUM_CELLS 4
-#define PATTERN_COL_RATIO 0.25
-#define PATTERN_TIME_UNIT 0.15
-#define ARROW_SIDE 40.0
-#define PATTERN_FILE "pattern.txt"
-#define MUSIC_FILE "music.wav"
+//#define PATTERN_FILE "pattern.txt"
+//#define MUSIC_FILE "music.wav"
 #define BLOCK_SIZE 50
 
 using namespace cv;
 using namespace std;
+
+const char* PATTERN_FILE = "pattern.txt";
+const char* MUSIC_FILE = "music.wav";
 
 VideoCapture *cap;
 int width = 1280;
@@ -49,7 +35,6 @@ bool background_image_flag = false;
 bool plane_detection_flag = true;
 vector<Point3f>  objectPoints;
 Size boardSize;
-float squareSize = 5;
 vector<Point2f> pointBuf;
 bool found = false;
 cv::Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
@@ -62,29 +47,26 @@ float projection[4][4];
 float zNear = 0.5;
 float zFar = 500;
 
-vector< vector<int> > patterns;
-float timer_start = 0.0;
-
-// pattern display
-Mat arrow_left, arrow_right, arrow_up, arrow_down;
-double start_line_padding = 100.0;
-double finish_line_padding = 50.0;
-
 
 // boolean flag
 bool start_play = false;
 
+
 //ROI of the dance pad's blocks
 Point2f front_bl, front_ur, left_bl, left_ur, right_bl, right_ur, back_bl, back_ur;
 
+// music
 thread music_thread;
 thread::id music_thread_id;
+char* music_file_path;
 
-// read dance patterns from the file
-void readPatterns(const char* file_name);
 
-// read arrow images
-void readArrows();
+/** Declaration **/
+// the thread function to play music
+void play_music();
+
+// draw dance pad
+void drawDancePad();
 
 // background subtraction
 void background_subtraction();
@@ -92,47 +74,12 @@ void background_subtraction();
 // plane detection
 void plane_detection();
 
-// get timer
-float timer();
 
-// start the pattern
-void start_pattern(Mat& image);
 
-// overlay the image
-void overlay(Mat& foreground, Mat& background, double x, double y, double width, double height);
-
-//read in camera calibration parameters
-void readParameters(const char* fileName);
-
-void play_music();
+/** Implementation **/
 
 void play_music(){
     system("afplay ./music/jmww/music.wav");
-}
-
-// a useful function for displaying your coordinate system
-void drawAxes(float length)
-{
-    glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT) ;
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) ;
-    glDisable(GL_LIGHTING) ;
-    glTranslatef(.0f,-squareSize,0.0f);
-    glBegin(GL_LINES) ;
-    glColor3f(1,0,0) ;
-    glVertex3f(0,0,0) ;
-    glVertex3f(length,0,0);
-    
-    glColor3f(0,1,0) ;
-    glVertex3f(0,0,0) ;
-    glVertex3f(0,length,0);
-    
-    glColor3f(0,0,1) ;
-    glVertex3f(0,0,0) ;
-    glVertex3f(0,0,length);
-    glEnd() ;
-    
-    glPopAttrib() ;
 }
 
 void snapshot(int windowWidth, int windowHeight, const char* filename){
@@ -151,103 +98,6 @@ void snapshot(int windowWidth, int windowHeight, const char* filename){
   IplImage ipltemp = flipped;
   cvCopy(&ipltemp, temp);
   cvSaveImage(filename, temp);
-}
-
-void overlay(Mat& foreground, Mat& background, int x, int y, int width, int height){
-    //cout<<foreground.channels()<<endl;
-    for (int i = y; i < y+height; i++){
-        for(int j = x; j < x+width; j++){
-            double opacity =((double)foreground.data[(i-y) * foreground.step + (j-x) * foreground.channels() + 3])/ 255.;
-            //cout<<opacity<<endl;
-
-            for(int c = 0; opacity < 0.999 && c < background.channels(); ++c)
-            {
-                unsigned char foregroundPx = foreground.data[(i-y) * foreground.step + (j-x) * foreground.channels() + c];
-                unsigned char backgroundPx = background.data[i * background.step +  j * background.channels() + c];
-                
-                background.data[i*background.step + background.channels()*j + c] = backgroundPx * (1.-opacity) + foregroundPx * opacity;
-            }
-        }
-    }
-}
-
-void start_pattern(Mat& image){
-    for (int i = 1; i <= NUM_CELLS ; i++) {
-        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), Scalar(255, 0, 0));
-    }
-    
-    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), Scalar(255, 0, 0));
-    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), Scalar(255, 0, 0));
-    
-    float time_now = timer();
-    cout << "time now: " << time_now << endl;
-    // for each line of the pattern
-    for (int i = 0; i < patterns.size(); i++) {
-        float distance = (time_now - i * PATTERN_TIME_UNIT) * (ARROW_SIDE*10);
-        
-        // if it's not the turn to show up for the rest, just break the loop
-        if (distance < 0)
-            break;
-        
-        // if it's already finished, just skip it to conitue
-        if (distance > image.rows - start_line_padding - finish_line_padding) {
-            continue;
-        }
-        
-        if (patterns[i][0] == 1) {
-            overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
-        }
-        
-        if (patterns[i][1] == 1) {
-            overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
-        }
-        
-        if (patterns[i][2] == 1) {
-            overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
-        }
-        
-        if (patterns[i][3] == 1) {
-            overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
-        }
-        
-    }
-}
-
-
-
-void initialiseOpenGL(){
-  glClearColor(0.0, 0.0, 0.0, 1.0);
-
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();   
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();   
-
-  glShadeModel(GL_SMOOTH);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_LIGHTING);
-  glEnable(GL_NORMALIZE);
-
-}
-
-void showCorners()
-{
-    GLUquadricObj *qobj = gluNewQuadric();
-    glPushMatrix();
-    
-    for(int i = 0; i<8; i++){
-      for(int j=0; j<6; j++){
-        glPopMatrix();
-        glPushMatrix();
-        //glScalef(-1,-1,1);
-        glTranslatef(squareSize*10, 0, 0);
-        glTranslatef(squareSize*i, 0, squareSize*j);
-        gluSphere(qobj,1,16,16);
-      }
-    }
-    glPopMatrix();
 }
 
 void drawDancePad()
@@ -346,6 +196,90 @@ void drawDancePad()
     gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
     back_ur.y = ty;
 
+}
+
+// background subtraction
+void background_subtraction(){
+    Mat blurred;
+    cv::GaussianBlur(image,blurred,cv::Size(3,3),0,0,cv::BORDER_DEFAULT);
+    Mat fg; //foreground
+    bgs.operator()(blurred,fg);
+    Mat bgmodel;
+    bgs.getBackgroundImage(bgmodel);
+    Mat medianed;
+    medianBlur(fg, medianed, 5); //median filtering it
+    cv::threshold(medianed,background_image,50.0f,255,CV_THRESH_BINARY);
+}
+
+void plane_detection(){
+    
+    found = findChessboardCorners( image, boardSize, pointBuf,
+                                  CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK);
+    //cout<<found<<endl;
+    
+    if(found){
+        Mat temp = image.clone();
+        undistort(temp, image, cameraMatrix, distCoeffs);
+        
+        //get extrinsic matrix
+        
+        solvePnP(Mat(objectPoints), Mat(pointBuf), cameraMatrix, distCoeffs, rotationRodrigues, translation,false,CV_ITERATIVE);
+        Rodrigues(rotationRodrigues, rotation);
+        
+        vector<Point2f> pointBuf2;
+        /*cout<<"object: "<<Mat(objectPoints)<<endl;
+         cout<<"rotation: "<<Mat(rotation)<<endl;
+         cout<<"rotation3: "<<rotationRodrigues<<endl;
+         cout<<"trans: "<<Mat(translation)<<endl;
+         cout<<"ip "<<Mat(pointBuf)<<endl;
+         cout<<"camera matrix: "<<cameraMatrix<<endl;
+         cout<<"distortion: "<<distCoeffs<<endl;
+         */
+        projectPoints(Mat(objectPoints), rotationRodrigues, Mat(translation), cameraMatrix, distCoeffs, pointBuf2);
+        //drawChessboardCorners( image, boardSize, Mat(pointBuf2), found );
+        //set the projection matrix
+        projection[0][0] = 2*cameraMatrix.at<double>(0,0)/width;
+        projection[0][1] = 0;
+        projection[0][2] = 0;
+        projection[0][3] = 0;
+        
+        projection[1][0] = 0;
+        projection[1][1] = -2*cameraMatrix.at<double>(1,1)/height;
+        projection[1][2] = 0;
+        projection[1][3] = 0;
+        
+        projection[2][0] = 1-2*cameraMatrix.at<double>(0,2)/width;
+        projection[2][1] = 1-(2*cameraMatrix.at<double>(1,2)+2)/height;
+        projection[2][2] = (zNear+zFar)/(zNear - zFar);
+        projection[2][3] = -1;
+        
+        projection[3][0] = 0;
+        projection[3][1] = 0;
+        projection[3][2] = 2*zNear*zFar/(zNear - zFar);
+        projection[3][3] = 0;
+        
+        //set the modelview matrix
+        modelview[0][0] = rotation.at<double>(0,0);
+        modelview[0][1] = -rotation.at<double>(1,0);
+        modelview[0][2] = -rotation.at<double>(2,0);
+        modelview[0][3] = 0;
+        
+        modelview[1][0] = rotation.at<double>(0,1);
+        modelview[1][1] = -rotation.at<double>(1,1);
+        modelview[1][2] = -rotation.at<double>(2,1);
+        modelview[1][3] = 0;
+        
+        modelview[2][0] = rotation.at<double>(0,2);
+        modelview[2][1] = -rotation.at<double>(1,2);
+        modelview[2][2] = -rotation.at<double>(2,2);
+        modelview[2][3] = 0;
+        
+        modelview[3][0] = translation.at<double>(0,0);
+        modelview[3][1] = -translation.at<double>(1,0);
+        modelview[3][2] = -translation.at<double>(2,0);
+        modelview[3][3] = 1;
+        
+    }
 }
 
 void display()
@@ -549,173 +483,6 @@ void idle()
     }
 }
 
-void readPatterns(const char* dir){
-    char file[100];
-    strcpy(file,dir); // copy string one into the result.
-    strcat(file,"/");
-    strcat(file,PATTERN_FILE);
-    cout << "opening pattern file from: " << file << endl;
-    fstream infile(file, ios_base::in);
-    if (!infile) {
-        cout << "No pattern file specified in the music path." << endl;
-        exit(0);
-    }
-    string temp;
-    while (getline(infile, temp))
-    {
-        istringstream buffer(temp);
-        int number;
-        vector<int> pattern;
-        for (int i = 0; i < NUM_CELLS; i++){
-            buffer >> number;
-            pattern.push_back(number);
-        }
-        patterns.push_back(pattern);
-    }
-    
-    cout << "pattern: " << endl;
-    for (int i = 0; i < patterns.size(); i++) {
-        cout << patterns[i][0] << ", " << patterns[i][1] << ", " << patterns[i][2] << ", " << patterns[i][3] << endl;
-    }
-
-    
-}
-
-void readArrows(Mat& arrow_up, Mat& arrow_down, Mat& arrow_left, Mat&arrow_right){
-    Mat arrow_up_tmp, arrow_down_tmp, arrow_left_tmp, arrow_right_tmp;
-    arrow_left_tmp = cvLoadImage("./image/arrow_left.png", CV_LOAD_IMAGE_COLOR);
-    arrow_right_tmp = cvLoadImage("./image/arrow_right.png", CV_LOAD_IMAGE_COLOR);
-    arrow_up_tmp = cvLoadImage("./image/arrow_up.png", CV_LOAD_IMAGE_COLOR);
-    arrow_down_tmp = cvLoadImage("./image/arrow_down.png", CV_LOAD_IMAGE_COLOR);
-    resize(arrow_left_tmp, arrow_left, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_right_tmp, arrow_right, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_up_tmp, arrow_up, Size(ARROW_SIDE, ARROW_SIDE));
-    resize(arrow_down_tmp, arrow_down, Size(ARROW_SIDE, ARROW_SIDE));
-}
-
-
-// background subtraction
-void background_subtraction(){
-    Mat blurred;
-    cv::GaussianBlur(image,blurred,cv::Size(3,3),0,0,cv::BORDER_DEFAULT);
-    Mat fg; //foreground
-    bgs.operator()(blurred,fg);
-    Mat bgmodel;       
-    bgs.getBackgroundImage(bgmodel); 
-    Mat medianed; 
-    medianBlur(fg, medianed, 5); //median filtering it                        
-    cv::threshold(medianed,background_image,50.0f,255,CV_THRESH_BINARY);
-}
-
-void plane_detection(){
-
-  found = findChessboardCorners( image, boardSize, pointBuf,
-                CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK);
-  //cout<<found<<endl;
-  
-  if(found){
-    Mat temp = image.clone();
-    undistort(temp, image, cameraMatrix, distCoeffs);
-    
-    //get extrinsic matrix
-    
-    solvePnP(Mat(objectPoints), Mat(pointBuf), cameraMatrix, distCoeffs, rotationRodrigues, translation,false,CV_ITERATIVE);
-    Rodrigues(rotationRodrigues, rotation);
-
-    vector<Point2f> pointBuf2;
-    /*cout<<"object: "<<Mat(objectPoints)<<endl;
-    cout<<"rotation: "<<Mat(rotation)<<endl;
-    cout<<"rotation3: "<<rotationRodrigues<<endl;
-    cout<<"trans: "<<Mat(translation)<<endl;
-    cout<<"ip "<<Mat(pointBuf)<<endl;
-    cout<<"camera matrix: "<<cameraMatrix<<endl;
-    cout<<"distortion: "<<distCoeffs<<endl;
-*/
-    projectPoints(Mat(objectPoints), rotationRodrigues, Mat(translation), cameraMatrix, distCoeffs, pointBuf2);
-    //drawChessboardCorners( image, boardSize, Mat(pointBuf2), found );
-    //set the projection matrix
-    projection[0][0] = 2*cameraMatrix.at<double>(0,0)/width;
-    projection[0][1] = 0;
-    projection[0][2] = 0;
-    projection[0][3] = 0;
-
-    projection[1][0] = 0;
-    projection[1][1] = -2*cameraMatrix.at<double>(1,1)/height;
-    projection[1][2] = 0;
-    projection[1][3] = 0;
-
-    projection[2][0] = 1-2*cameraMatrix.at<double>(0,2)/width;
-    projection[2][1] = 1-(2*cameraMatrix.at<double>(1,2)+2)/height;
-    projection[2][2] = (zNear+zFar)/(zNear - zFar);
-    projection[2][3] = -1;
-
-    projection[3][0] = 0;
-    projection[3][1] = 0;
-    projection[3][2] = 2*zNear*zFar/(zNear - zFar);
-    projection[3][3] = 0;
- 
-    //set the modelview matrix
-    modelview[0][0] = rotation.at<double>(0,0);
-    modelview[0][1] = -rotation.at<double>(1,0);
-    modelview[0][2] = -rotation.at<double>(2,0);
-    modelview[0][3] = 0;
-
-    modelview[1][0] = rotation.at<double>(0,1);
-    modelview[1][1] = -rotation.at<double>(1,1);
-    modelview[1][2] = -rotation.at<double>(2,1);
-    modelview[1][3] = 0;
-
-    modelview[2][0] = rotation.at<double>(0,2);
-    modelview[2][1] = -rotation.at<double>(1,2);
-    modelview[2][2] = -rotation.at<double>(2,2);
-    modelview[2][3] = 0;
-
-    modelview[3][0] = translation.at<double>(0,0);
-    modelview[3][1] = -translation.at<double>(1,0);
-    modelview[3][2] = -translation.at<double>(2,0);
-    modelview[3][3] = 1;
-
-    }
-}
-
-void readParameters(const char* fileName, Mat& cm, Mat& dc){
-  ifstream inFile;
-  inFile.open(fileName);
-  if(!inFile.is_open()){
-    cout<<"Could not open camera.txt"<<endl;
-  }
-  
-  char buffer[30];
-  inFile.getline(buffer,30);
-
-  inFile >> cm.at<double>(0,0);
-  inFile >>  cm.at<double>(0,1);
-  inFile >>  cm.at<double>(0,2);
-  inFile >>  cm.at<double>(1,0);
-  inFile >>  cm.at<double>(1,1);
-  inFile >>  cm.at<double>(1,2);
-  inFile >>  cm.at<double>(2,0);
-  inFile >>  cm.at<double>(2,1);
-  inFile >>  cm.at<double>(2,2);
-  char buffer2[30];
-  inFile.getline(buffer2,30); 
-  inFile.getline(buffer2,30); 
-  inFile.getline(buffer2,30);
-  inFile >>  dc.at<double>(0,0);
-  inFile >>  dc.at<double>(1,0);
-  inFile >>  dc.at<double>(2,0);
-  inFile >>  dc.at<double>(3,0);
-  inFile >>  dc.at<double>(4,0);
-}
-
-
-float timer(){
-    clock_t t = clock();
-    float now = float(t)/CLOCKS_PER_SEC;
-    return now-timer_start;
-}
-
-
 int main( int argc, char **argv )
 {
     int w,h;
@@ -746,10 +513,14 @@ int main( int argc, char **argv )
     height = h ? h : height;
     
     //initialize pattern reading
-    readPatterns(argv[2]);
+    readPatterns(argv[2], PATTERN_FILE);
     
     //read arrow images
     readArrows(arrow_up, arrow_down, arrow_left, arrow_right);
+    
+    //read music
+    music_file_path = new char[100];
+    readMusic(argv[2], music_file_path, MUSIC_FILE);
     
     //initialize background subtractor
     bgs.nmixtures = 5;
@@ -795,6 +566,7 @@ int main( int argc, char **argv )
     // start GUI loop
     glutMainLoop();
     
+    delete[] music_file_path;
     return 0;
 }
 
