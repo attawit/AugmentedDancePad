@@ -8,11 +8,14 @@
 #include <cstdio>
 #include <fstream>
 #include <thread>
+//#include <boost/thread.hpp>
 #include "helper.h"
 
 //#define PATTERN_FILE "pattern.txt"
 //#define MUSIC_FILE "music.wav"
 #define BLOCK_SIZE 50
+#define VELOCITY_THRESHOLD 5.0
+#define HAS_OBJ_RATIO_THRESHOLD 0.2
 
 using namespace cv;
 using namespace std;
@@ -51,6 +54,14 @@ float zFar = 500;
 // boolean flag
 bool start_play = false;
 
+bool move_front = false;
+bool move_back = false;
+bool move_left = false;
+bool move_right = false;
+bool stop_front = false;
+bool stop_back = false;
+bool stop_left = false;
+bool stop_right = false;
 
 //ROI of the dance pad's blocks
 Point2f front_bl, front_ur, left_bl, left_ur, right_bl, right_ur, back_bl, back_ur;
@@ -79,25 +90,9 @@ void plane_detection();
 /** Implementation **/
 
 void play_music(){
+    std::this_thread::sleep_for (std::chrono::seconds(5));
+    std::cout << "pause of " << TIME_PREPARATION << " seconds ended\n";
     system("afplay ./music/jmww/music.wav");
-}
-
-void snapshot(int windowWidth, int windowHeight, const char* filename){
-  cv::Mat img(height, width, CV_8UC3);
-  //use fast 4-byte alignment (default anyway) if possible
-  glPixelStorei(GL_PACK_ALIGNMENT, (img.step & 3) ? 1 : 4);
-
-  //set length of one complete row in destination data (doesn't need to equal img.cols)
-  glPixelStorei(GL_PACK_ROW_LENGTH, img.step/img.elemSize());
-  glReadPixels(0, 0, img.cols, img.rows, GL_BGR, GL_UNSIGNED_BYTE, img.data);
-  Mat flipped;
-  cv::flip(img, flipped, 0);
-  //imwrite(filename, flipped);
-  IplImage* temp;
-  temp = cvCreateImage(cvSize(flipped.cols, flipped.rows),8,3);
-  IplImage ipltemp = flipped;
-  cvCopy(&ipltemp, temp);
-  cvSaveImage(filename, temp);
 }
 
 void drawDancePad()
@@ -282,6 +277,66 @@ void plane_detection(){
     }
 }
 
+Point2f get_velocity(Point2f rect_bl, Point2f rect_ur){
+    return front_bl;
+}
+
+
+bool hasObjInRoi(Point2f rect_bl, Point2f rect_ur){
+    Mat mat(background_image, Rect(round(rect_bl.x), round(rect_bl.y), round(rect_ur.x), round(rect_ur.y)));
+    // count how many pixels is filled
+    int count = countNonZero(mat);
+    // if the count is greater than some ratio of the whole roi,
+    // we say it contains object
+    if (count > (rect_ur.x-rect_bl.x)*(rect_ur.y-rect_bl.y) * HAS_OBJ_RATIO_THRESHOLD)
+        return true;
+    else
+        return false;
+}
+
+void motionDetectionHelper(bool& pre, bool& stop, Point2f rect_bl, Point2f rect_ur){
+    Point2f velocity = get_velocity(rect_bl, rect_ur);
+
+    if (pre) {
+        if (!hasObjInRoi(rect_bl, rect_ur)) {
+            // if there is no object in the roi, set pre_fron to false for the next frame
+            pre = false;
+        }else{
+            if (velocity.y < 0) {
+                if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
+                    // if it's moving, set pre_front for the next frame
+                    pre = true;
+                }else{
+                    pre = false;
+                    stop = true;
+                }
+            }else{
+                pre = false;
+            }
+        }
+    }else{
+        // if the velocity in the y axis is equal to or greater than 0, than the sub-velocity is to the upside, just discard it.
+        if (velocity.y < 0) {
+            if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
+                // if it's moving, set pre_front for the next frame
+                pre = true;
+            }
+        }
+    }
+}
+
+void motionDetection(){
+    // detect whether there is movement following a stop in each roi
+    motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
+    motionDetectionHelper(move_back, stop_back, back_bl, back_ur);
+    motionDetectionHelper(move_left, stop_left, left_bl, left_ur);
+    motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
+    
+    
+    
+    
+}
+
 void display()
 {
     // clear the window
@@ -442,6 +497,7 @@ void keyboard( unsigned char key, int x, int y )
             music_thread = thread(play_music);
             music_thread_id = music_thread.get_id();
             cout << music_thread_id << endl;
+            start_pattern(image);
             break;
         case 'b':
             if(background_image_flag)
@@ -566,6 +622,7 @@ int main( int argc, char **argv )
     // start GUI loop
     glutMainLoop();
     
+    music_thread.join();
     delete[] music_file_path;
     return 0;
 }
