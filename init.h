@@ -14,17 +14,21 @@
 #define NUM_CELLS 4
 #define ARROW_SIDE 40.0
 #define PATTERN_COL_RATIO 0.25
-#define PATTERN_TIME_UNIT 0.15
+#define PATTERN_TIME_UNIT 0.33
+#define TIME_PREPARATION 5
 
 using namespace cv;
 using namespace std;
 
 vector< vector<int> > patterns;
+vector<float> times;
 
 // pattern display
 Mat arrow_left, arrow_right, arrow_up, arrow_down;
 double start_line_padding = 100.0;
 double finish_line_padding = 50.0;
+
+Scalar line_color(255, 0, 0);
 
 float timer_start = 0.0;
 
@@ -44,17 +48,21 @@ void readPatterns(const char* dir, const char* file_name){
     {
         istringstream buffer(temp);
         int number;
+        float time;
         vector<int> pattern;
         for (int i = 0; i < NUM_CELLS; i++){
             buffer >> number;
             pattern.push_back(number);
         }
+        buffer >> time;
+        times.push_back(time);
         patterns.push_back(pattern);
     }
     
     cout << "pattern: " << endl;
     for (int i = 0; i < patterns.size(); i++) {
         cout << patterns[i][0] << ", " << patterns[i][1] << ", " << patterns[i][2] << ", " << patterns[i][3] << endl;
+        cout << times[i] << endl;
     }
 
     

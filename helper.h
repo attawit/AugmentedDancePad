@@ -6,7 +6,34 @@ float squareSize = 5;
 float timer(){
     clock_t t = clock();
     float now = float(t)/CLOCKS_PER_SEC;
-    return now-timer_start;
+    return now-timer_start-TIME_PREPARATION;
+}
+
+float get_vel_length(Point2f point){
+    return sqrt(point.x*point.x + point.y*point.y);
+}
+
+void matConvertToIplImage(Mat& mat, IplImage* ipl){
+    ipl = cvCreateImage(cvSize(mat.cols, mat.rows),8,3);
+    IplImage ipltemp = mat;
+    cvCopy(&ipltemp, ipl);
+    
+}
+
+void snapshot(int windowWidth, int windowHeight, const char* filename){
+    cv::Mat img(windowHeight, windowWidth, CV_8UC3);
+    //use fast 4-byte alignment (default anyway) if possible
+    glPixelStorei(GL_PACK_ALIGNMENT, (img.step & 3) ? 1 : 4);
+    
+    //set length of one complete row in destination data (doesn't need to equal img.cols)
+    glPixelStorei(GL_PACK_ROW_LENGTH, img.step/img.elemSize());
+    glReadPixels(0, 0, img.cols, img.rows, GL_BGR, GL_UNSIGNED_BYTE, img.data);
+    Mat flipped;
+    cv::flip(img, flipped, 0);
+    //imwrite(filename, flipped);
+    IplImage* temp;
+    matConvertToIplImage(flipped, temp);
+    cvSaveImage(filename, temp);
 }
 
 void showCorners()
@@ -72,41 +99,45 @@ void overlay(Mat& foreground, Mat& background, int x, int y, int width, int heig
 
 void start_pattern(Mat& image){
     for (int i = 1; i <= NUM_CELLS ; i++) {
-        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), Scalar(255, 0, 0));
+        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
     }
     
-    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), Scalar(255, 0, 0));
-    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), Scalar(255, 0, 0));
+    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
+    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
     
     float time_now = timer();
-    cout << "time now: " << time_now << endl;
+    //cout << "time now: " << time_now << endl;
+    if (time_now > 0) {
+        line_color = Scalar(0, 255, 0);
+    }
     // for each line of the pattern
+    float total_distance = image.rows-finish_line_padding;
     for (int i = 0; i < patterns.size(); i++) {
-        float distance = (time_now - i * PATTERN_TIME_UNIT) * (ARROW_SIDE*10);
+        float distance = (timer() - times[i]) * (ARROW_SIDE) + total_distance;
         
         // if it's not the turn to show up for the rest, just break the loop
-        if (distance < 0)
+        if (distance - start_line_padding < 0)
             break;
         
         // if it's already finished, just skip it to conitue
-        if (distance > image.rows - start_line_padding - finish_line_padding) {
+        if (distance > image.rows-finish_line_padding) {
             continue;
         }
         
         if (patterns[i][0] == 1) {
-            overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][1] == 1) {
-            overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][2] == 1) {
-            overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][3] == 1) {
-            overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(start_line_padding+(distance-ARROW_SIDE/2)), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
     }
