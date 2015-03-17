@@ -13,9 +13,10 @@
 
 //#define PATTERN_FILE "pattern.txt"
 //#define MUSIC_FILE "music.wav"
-#define BLOCK_SIZE 50
-#define VELOCITY_THRESHOLD 5.0
-#define HAS_OBJ_RATIO_THRESHOLD 0.2
+#define BLOCK_SIZE 55
+#define VELOCITY_THRESHOLD 10
+#define HAS_OBJ_RATIO_THRESHOLD 0.0001
+#define FEATURENUM 80
 
 using namespace cv;
 using namespace std;
@@ -57,8 +58,9 @@ bool start_play = false;
 //ROI of the dance pad's blocks
 Point2f front_bl, front_ur, left_bl, left_ur, right_bl, right_ur, back_bl, back_ur;
 
-//detection threshold
-float mag_threshold = 0.08;
+//direction in each block
+Point2f front_v, left_v, right_v, back_v;
+int front_count, left_count, right_count, back_count;
 
 //optical flow parameters
 bool needToInit = false;
@@ -102,18 +104,181 @@ void play_music(){
     system("afplay ./music/jmww/music.wav");
 }
 
+bool withinRect(Point2f p, Point2f bl, Point2f ur){
+    if(p.x>bl.x&&p.x<ur.x&&p.y>bl.y&&p.y<ur.y)
+        return true;
+    else
+        return false;
+}
+
+//clear outliers of feature points
+void clearOutlier(Point2f bl, Point2f ur){
+  Point2f new_ur = Point2f(ur.x,ur.y+30);
+  for(int i=0; i<points[1].size(); i++){
+    if(!withinRect(points[1][i], bl, new_ur)){
+      points[1].erase(points[1].begin()+i);
+      points[0].erase(points[0].begin()+i);
+      i--; 
+    }
+  }
+}
+
+void regenerate_features(Point2f bl, Point2f ur){
+  int count = 0;
+  for(int i=0; i<points[1].size(); i++){
+      if(withinRect(points[1][i], bl, ur)){
+        count++;          
+      }    
+  }
+  if(count<FEATURENUM){
+    needToInit = true;
+    //cout<<"regenerate"<<endl;
+  } 
+
+}
+
+
+void get_velocity(void){//use the result of LK
+  front_v = Point2f(.0f,.0f);
+  back_v = Point2f(.0f,.0f);
+  left_v = Point2f(.0f,.0f);
+  right_v = Point2f(.0f,.0f);
+
+  front_count = 0;
+  left_count = 0;
+  right_count = 0;
+  back_count = 0;
+  //back_count2 = 0;
+  Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-50.0f);
+  Point2f new_left_ur = Point2f(left_ur.x-10.0f,left_ur.y);
+  Point2f new_right_bl = Point2f(right_bl.x+10.0f, right_bl.y);
+  Point2f new_back_bl = Point2f(back_bl.x,back_bl.y-15.0f);
+  for(int i = 0; i<points[0].size(); i++){
+    if(withinRect(points[0][i],front_bl,new_front_ur)){
+      float x = points[0][i].x - points[1][i].x;
+      float y = points[0][i].y - points[1][i].y;
+      front_v.x -= x;
+      front_v.y -= y;
+      front_count ++;
+    }else if(withinRect(points[0][i],new_back_bl,back_ur)){
+      float x = points[0][i].x - points[1][i].x;
+      float y = points[0][i].y - points[1][i].y;
+      back_v.x -= x;
+      back_v.y -= y;
+      back_count++;
+      //if(y)
+    }else if(withinRect(points[0][i],left_bl,new_left_ur)){
+      float x = points[0][i].x - points[1][i].x;
+      float y = points[0][i].y - points[1][i].y;
+      left_v.x -= x;
+      left_v.y -= y;
+      left_count ++;
+    }else if(withinRect(points[0][i],new_right_bl,right_ur)){
+      float x = points[0][i].x - points[1][i].x;
+      float y = points[0][i].y - points[1][i].y;
+      right_v.x -= x;
+      right_v.y -= y;
+      right_count ++;
+    }
+
+  }
+
+  if(front_count!=0){
+    front_v.x /= front_count;
+    front_v.y /= front_count;
+  }
+  if(back_count!=0){
+    back_v.x /= back_count;
+    back_v.y /= back_count;
+    cout<<"back_y"<<back_v.y<<endl;
+  }
+  if(left_count!=0){
+    left_v.x /= left_count;
+    left_v.y /= left_count;
+  }
+  if(right_count!=0){
+    right_v.x /= right_count;
+    right_v.y /= right_count;
+  }
+
+  //cout<<"fv"<<front_v<<endl;
+
+}
+
+Point2f get_velocity(Point2f bl, Point2f ur){//use the result of LK
+  Point2f res = Point2f(.0f,.0f);
+  for(int i = 0; i<points[0].size(); i++){
+    if(withinRect(points[0][i],bl,ur)){
+      float x = points[0][i].x - points[1][i].x;
+      float y = points[0][i].y - points[1][i].y;
+      res.x -= x;
+      res.y -= y;
+    }
+
+  }
+
+  cout<<"res "<<res<<endl;
+  return res;
+}
+
+Point2f get_velocity2(Point2f bl, Point2f ur){//use the result of farne OF
+    // findLK(Mat image);
+    // int count = 0;
+    // for(int i=0; i<points[1].size; i++){
+    //     if(withinRect(points[1][i], bl, ur))
+    //         count ++:
+    // }
+    Mat flow, downsize;  
+    // CvRect setRect = cvRect(100, 200, 200, 300); // ROI in image
+    // cvSetImageROI(previous, setRect);
+    cvtColor(image, downsize, COLOR_BGR2GRAY);
+    if(previous.empty()){
+      downsize.copyTo(previous);
+    }
+
+    Mat previous_roi(previous,Rect(bl,ur));
+    Mat downsize_roi(downsize,Rect(bl,ur));
+    calcOpticalFlowFarneback(previous_roi, downsize_roi, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+    cv::Mat xy[2]; //X,Y
+    cv::split(flow, xy);
+    //calculate angle and magnitude
+    cv::Mat magnitude, angle;
+    cv::cartToPolar(xy[0], xy[1], magnitude, angle, true);
+    //cout<<magnitude;
+    double mag_max;
+    magnitude.convertTo(magnitude, CV_8UC1);
+    angle.convertTo(angle, CV_8UC1);
+    cv::minMaxLoc(magnitude, 0, &mag_max,0,0);
+    //magnitude.convertTo(magnitude, -1, 255.0/mag_max);
+    //cout<<mag_max<<endl;
+    threshold(magnitude, magnitude, of_threshold, 1.0, CV_THRESH_BINARY);
+    
+    Mat mag_chans[4]; 
+    split(magnitude,mag_chans);
+    //cout<<"mag mean "<<mean(mag_chans[0])[0]<<endl;
+    Mat ang_chans[4]; 
+    split(angle,ang_chans);
+    //cout<<"angle mean "<<mean(ang_chans[0])<<endl;
+
+    Mat average = mag_chans[0].mul(ang_chans[0]);
+    //cout<<"angle real average "<<sum(average)[0]/sum(mag_chans[0])[0]<<endl;
+    //magnitude.copyTo(flowImage);
+    //draw optical flow 
+    //colored_of = Mat(flow.rows,flow.cols, CV_8UC3);
+    
+    Point2f res(mean(mag_chans[0])[0],sum(average)[0]/sum(mag_chans[0])[0]);
+    return res;
+}
 
 void findLK(Mat image){
     //LK optical flow
     cvtColor(image, gray, COLOR_BGR2GRAY);
-
+    
     if(needToInit){
          // automatic initialization
-        
-        Rect userROI(Point2f(front_bl.x,front_ur.y),Point2f(right_bl.x,back_ur.y));
+        Rect userROI(Point2f(front_bl.x,front_ur.y),Point2f(right_bl.x,back_bl.y));
         //cout<<"ROI"<<userROI<<endl;
         Mat mask = Mat::zeros(gray.size(), CV_8UC1);  // type of mask is CV_8U
-        cout<<"size "<<gray.size()<<endl;
         mask(userROI) = 1; 
        //   cout<<"generate point single passenger"<<endl;
         goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, mask, 3, 0, 0.04);
@@ -121,8 +286,6 @@ void findLK(Mat image){
         cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
             //addRemovePt = false;
     }else if(!points[0].empty()){
-        //    cout<<"draw point single passenger"<<endl;
-            //cout<<points[1]<<endl;
         vector<uchar> status;
         vector<float> err;
         if(prevGray.empty())
@@ -138,20 +301,21 @@ void findLK(Mat image){
                 circle( image, points[1][i], 3, Scalar(255,255,0), -1, 8);
         }
         points[1].resize(k);
+        clearOutlier(Point2f(left_bl.x,front_bl.y),Point2f(right_ur.x+50,back_ur.y));
+        get_velocity();
     }
     
     needToInit = false;
+    if(!needToInit&&!points[0].empty()&&!points[1].empty()){
+      
+      regenerate_features(Point2f(left_bl.x,front_bl.y),Point2f(right_ur.x+50,back_ur.y));
+
+    }
     std::swap(points[1], points[0]);
     cv::swap(prevGray, gray);
 
 }
 
-bool withinRect(Point2f p, Point2f bl, Point2f ur){
-    if(p.x>bl.x&&p.x<ur.x&&p.y>bl.y&&p.y<ur.y)
-        return true;
-    else
-        return false;
-}
 
 //draw colorful optical flow image
 void FlowToRGB(const cv::Mat & inpFlow, cv::Mat & rgbFlow){
@@ -162,16 +326,6 @@ void FlowToRGB(const cv::Mat & inpFlow, cv::Mat & rgbFlow){
   float sum_x, sum_y = 0.0f;
   Mat flow_magnitude = Mat(inpFlow.rows,inpFlow.cols, CV_32FC1);
   Mat flow_angle = Mat(inpFlow.rows,inpFlow.cols, CV_32FC1);
-  //cv::Mat xy[2]; //X,Y
-  //cv::split(inpFlow, xy);
-  //cv::Mat magnitude, angle;
-  //cv::cartToPolar(xy[0], xy[1], magnitude, angle, true);
-  //magnitude.convertTo(magnitude, CV_8UC1);
-  //angle.convertTo(angle, CV_8UC1);
-  //double mag_max, angle_max;
-  //cv::minMaxLoc(magnitude, 0, &mag_max,0,0);
-  //cv::minMaxLoc(angle, 0, &angle_max,0,0);
-  //cout<<"flow size: "<<inpFlow.size()<<" COLS: "<<inpFlow.rows<<endl;
   for(int r = 0; r < flow_magnitude.rows; r++)
   {
       for(int c = 0; c < flow_magnitude.cols; c++)
@@ -234,56 +388,6 @@ void FlowToRGB(const cv::Mat & inpFlow, cv::Mat & rgbFlow){
 
 }
 
-Point2f get_velocity(Point2f bl, Point2f ur){
-    // findLK(Mat image);
-    // int count = 0;
-    // for(int i=0; i<points[1].size; i++){
-    //     if(withinRect(points[1][i], bl, ur))
-    //         count ++:
-    // }
-  cout<<bl<<endl;
-    Mat flow, downsize;  
-    // CvRect setRect = cvRect(100, 200, 200, 300); // ROI in image
-    // cvSetImageROI(previous, setRect);
-    cvtColor(image, downsize, COLOR_BGR2GRAY);
-    if(previous.empty()){
-      downsize.copyTo(previous);
-    }
-
-    Mat previous_roi(previous,Rect(bl,ur));
-    Mat downsize_roi(downsize,Rect(bl,ur));
-    calcOpticalFlowFarneback(previous_roi, downsize_roi, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
-    cv::Mat xy[2]; //X,Y
-    cv::split(flow, xy);
-    //calculate angle and magnitude
-    cv::Mat magnitude, angle;
-    cv::cartToPolar(xy[0], xy[1], magnitude, angle, true);
-    //cout<<magnitude;
-    double mag_max;
-    magnitude.convertTo(magnitude, CV_8UC1);
-    angle.convertTo(angle, CV_8UC1);
-    cv::minMaxLoc(magnitude, 0, &mag_max,0,0);
-    //magnitude.convertTo(magnitude, -1, 255.0/mag_max);
-    //cout<<mag_max<<endl;
-    threshold(magnitude, magnitude, of_threshold, 1.0, CV_THRESH_BINARY);
-    
-    Mat mag_chans[4]; 
-    split(magnitude,mag_chans);
-    cout<<"mag mean "<<mean(mag_chans[0])[0]<<endl;
-    Mat ang_chans[4]; 
-    split(angle,ang_chans);
-    //cout<<"angle mean "<<mean(ang_chans[0])<<endl;
-
-    Mat average = mag_chans[0].mul(ang_chans[0]);
-    //cout<<"angle real average "<<sum(average)/sum(mag_chans[0])<<endl;
-    //magnitude.copyTo(flowImage);
-    //draw optical flow 
-    //colored_of = Mat(flow.rows,flow.cols, CV_8UC3);
-    
-    Point2f res(mean(mag_chans[0])[0],sum(average)[0]/sum(mag_chans[0])[0]);
-    return res;
-}
-
 void drawDancePad()
 {
     glEnable(GL_BLEND);
@@ -329,8 +433,10 @@ void drawDancePad()
     //down
     glTranslatef(0, 0, -2*BLOCK_SIZE);
     glColor4f(153.0/255.0, 204.0/255.0, 1.0,0.5); 
-    if(stop_front)
+    if(stop_front){
       glColor4f(1.0, 1.0, 1.0,0.5); 
+      //cout<<"change color"<<endl;
+    }
     glBegin(GL_POLYGON); 
     glVertex3f(0.0, 0.0, 0.0); 
     glVertex3f(BLOCK_SIZE, 0.0, 0.0); 
@@ -384,7 +490,7 @@ void drawDancePad()
     gluProject(squareSize*10+BLOCK_SIZE, 0, -squareSize*2+BLOCK_SIZE, _modelview, _projection, _viewport, &tx, &ty, &tz);
     back_bl.y = ty;
     gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*1.5, _modelview, _projection, _viewport, &tx, &ty, &tz);
-    back_ur.x = tx;
+    back_ur.x = tx+BLOCK_SIZE*0.3;
     gluProject(squareSize*10+BLOCK_SIZE*2, 0, -squareSize*2+BLOCK_SIZE*2, _modelview, _projection, _viewport, &tx, &ty, &tz);
     back_ur.y = ty;
 
@@ -476,62 +582,87 @@ void plane_detection(){
 
 
 bool hasObjInRoi(Point2f rect_bl, Point2f rect_ur){
-    Mat mat(background_image, Rect(round(rect_bl.x), round(rect_bl.y), round(rect_ur.x), round(rect_ur.y)));
+  //cout<<rect_bl<<" "<<rect_ur<<endl;
+    Mat mat(background_image, Rect(rect_bl, rect_ur));
     // count how many pixels is filled
     int count = countNonZero(mat);
+    //cout<<"nonzero in bs "<<count<<endl;
     // if the count is greater than some ratio of the whole roi,
     // we say it contains object
-    if (count > (rect_ur.x-rect_bl.x)*(rect_ur.y-rect_bl.y) * HAS_OBJ_RATIO_THRESHOLD)
-        return true;
-    else
-        return false;
+    if (count > (rect_ur.x-rect_bl.x)*(rect_ur.y-rect_bl.y) * HAS_OBJ_RATIO_THRESHOLD){
+      //cout<<"has obj"<<endl;
+      return true;
+    }else{
+      return false;
+    }
+        
 }
 
-void motionDetectionHelper(bool& pre, bool& stop, Point2f rect_bl, Point2f rect_ur){
-    Point2f velocity = get_velocity(rect_bl, rect_ur);
-
+void motionDetectionHelper(int id, bool& pre, bool& stop, Point2f v, Point2f rect_bl, Point2f rect_ur){
+    //Point2f velocity = get_velocity(rect_bl, rect_ur);
+    Point2f velocity = v;
+    //cout<<"v "<<v<<endl;
     if (pre) {
         if (!hasObjInRoi(rect_bl, rect_ur)) {
             // if there is no object in the roi, set pre_fron to false for the next frame
             pre = false;
         }else{
-            if (velocity.y < 0) {
+            //if (velocity.y < 0) {
                 if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
                     // if it's moving, set pre_front for the next frame
                     pre = true;
                 }else{
                     pre = false;
                     stop = true;
+                    //cout<<"HIT!"<<endl;
                 }
-            }else{
-                pre = false;
-            }
+            // }else{
+            //     pre = false;
+            // }
         }
     }else{
         // if the velocity in the y axis is equal to or greater than 0, than the sub-velocity is to the upside, just discard it.
-        if (velocity.y < 0) {
-            if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
+        //if (velocity.y < 0) {
+      if(id==2){
+        if(velocity.y > 0){
+         if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
                 // if it's moving, set pre_front for the next frame
                 pre = true;
             }
         }
+      }else if(id==1){
+        if (get_vel_length(velocity) > VELOCITY_THRESHOLD*1.5) {
+            // if it's moving, set pre_front for the next frame
+            pre = true;
+        }
+      }else{
+        if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
+            // if it's moving, set pre_front for the next frame
+            pre = true;
+        }
+      }
     }
 }
 
 void motionDetection(){
     // detect whether there is movement following a stop in each roi
-    motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
-    motionDetectionHelper(move_back, stop_back, back_bl, back_ur);
-    motionDetectionHelper(move_left, stop_left, left_bl, left_ur);
-    motionDetectionHelper(move_right, stop_right, right_bl, right_ur);
+
+    // motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
+    // motionDetectionHelper(move_back, stop_back, back_bl, back_ur);
+    // motionDetectionHelper(move_left, stop_left, left_bl, left_ur);
+    // motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
     
+    motionDetectionHelper(1,move_front, stop_front, front_v, front_bl, front_ur);
+    motionDetectionHelper(2,move_back, stop_back, back_v, back_bl, back_ur);
+    motionDetectionHelper(3,move_left, stop_left, left_v, left_bl, left_ur);
+    motionDetectionHelper(4,move_right, stop_right, right_v, right_bl, right_ur);
+
 }
 
 void display()
 {
     // clear the window
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
     
     cv::Mat tempimage;
     image.copyTo(tempimage);
@@ -577,10 +708,17 @@ void display()
         merge(newchans,4,overlay_test);
         
         //show the 2D block ROI position
-        rectangle(overlay_test, left_bl, left_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
-        rectangle(overlay_test, right_bl, right_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
-        rectangle(overlay_test, front_bl, front_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
-        rectangle(overlay_test, back_bl, back_ur,cvScalar(0, 255, 255, 100), CV_FILLED, 8, 0);
+        Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-40.0f);
+        Point2f new_left_ur = Point2f(left_ur.x-20.0f,left_ur.y);
+        Point2f new_right_bl = Point2f(right_bl.x+20.0f, right_bl.y);
+        Point2f new_back_bl = Point2f(back_bl.x,back_bl.y-15.0f);
+        //rectangle(overlay_test, left_bl, new_left_ur,cvScalar(0, 255, 255, 0), CV_FILLED, 8, 0);
+        //rectangle(overlay_test, new_right_bl, right_ur,cvScalar(0, 255, 255, 0), CV_FILLED, 8, 0);
+
+          //Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-50.0f);
+        //rectangle(overlay_test, front_bl, new_front_ur,cvScalar(0, 255, 255, 0), CV_FILLED, 8, 0);
+        //rectangle(overlay_test, new_back_bl, back_ur,cvScalar(0, 255, 255, 0), CV_FILLED, 8, 0);
+        
         glDrawPixels( overlay_test.size().width, overlay_test.size().height, GL_BGRA, GL_UNSIGNED_BYTE, overlay_test.ptr() );
         
     }else{
@@ -758,6 +896,15 @@ void keyboard( unsigned char key, int x, int y )
 
 void idle()
 {
+    stop_front = false;
+    stop_right = false;
+    stop_left = false;
+    stop_back = false;
+
+    front_v = Point2f(.0f,.0f);
+    back_v = Point2f(.0f,.0f);
+    left_v = Point2f(.0f,.0f);
+    right_v = Point2f(.0f,.0f);
 
     // grab a frame from the camera
     (*cap) >> image;
@@ -773,36 +920,11 @@ void idle()
     }
     
     if (start_play) {
-        //motionDetection();
+        findLK(image);
+        motionDetection();
         start_pattern(image);
-        
-        // clear the hit information
-        stop_left = false;
-        stop_right = false;
-        stop_front = false;
-        stop_back = false;
     }
 
-    findLK(image);
-    if(show_of_flag){
-        if(get_velocity(front_bl,front_ur).x>mag_threshold){
-          stop_front = true;
-          cout<<"front"<<endl;
-        }
-        if(get_velocity(back_bl,back_ur).x>mag_threshold){
-          stop_back = true;
-          cout<<"back"<<endl;
-        }
-        if(get_velocity(left_bl,left_ur).x>mag_threshold){
-          stop_left = true;
-          cout<<"left"<<endl;
-        }
-        if(get_velocity(right_bl,right_ur).x>mag_threshold){
-          stop_right = true;
-          cout<<"right"<<endl;
-        }
-
-    }
     cvtColor(image, previous, COLOR_BGR2GRAY);
 }
 
