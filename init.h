@@ -14,6 +14,8 @@
 #define NUM_CELLS 4
 #define ARROW_SIDE 40.0
 #define PATTERN_COL_RATIO 0.25
+#define PATTERN_HIT_LINE_RATIO 0.80
+#define PATTERN_HIT_BOUND 20.0
 #define PATTERN_TIME_UNIT 0.33
 #define TIME_PREPARATION 5
 
@@ -24,13 +26,25 @@ vector< vector<int> > patterns;
 vector<float> times;
 
 // pattern display
-Mat arrow_left, arrow_right, arrow_up, arrow_down;
+Mat arrow_left, arrow_right, arrow_up, arrow_down, arrow_left_hit, arrow_right_hit, arrow_up_hit, arrow_down_hit;
+Mat pattern_area, pattern_area_bg_color;
 double start_line_padding = 100.0;
 double finish_line_padding = 50.0;
+double pattern_alpha = 0.3;
+
+bool move_front = false;
+bool move_back = false;
+bool move_left = false;
+bool move_right = false;
+bool stop_front = false;
+bool stop_back = false;
+bool stop_left = false;
+bool stop_right = false;
 
 Scalar line_color(255, 0, 0);
 
-float timer_start = 0.0;
+chrono::time_point<chrono::system_clock> timer_start;
+//float timer_start = 0.0;
 
 void readPatterns(const char* dir, const char* file_name){
     char file[100];
@@ -77,16 +91,29 @@ void readMusic(const char* dir, char* music_file_path, const char* file_name){
     cout << "opening music file from: " << music_file_path << endl;
 }
 
-void readArrows(Mat& arrow_up, Mat& arrow_down, Mat& arrow_left, Mat&arrow_right){
-    Mat arrow_up_tmp, arrow_down_tmp, arrow_left_tmp, arrow_right_tmp;
+void readArrows(Mat& arrow_up, Mat& arrow_down, Mat& arrow_left, Mat&arrow_right, Mat& arrow_up_hit, Mat& arrow_down_hit, Mat& arrow_left_hit, Mat&arrow_right_hit){
+    Mat arrow_up_tmp, arrow_down_tmp, arrow_left_tmp, arrow_right_tmp,arrow_up_hit_tmp, arrow_down_hit_tmp, arrow_left_hit_tmp, arrow_right_hit_tmp;
     arrow_left_tmp = cvLoadImage("./image/arrow_left.png", CV_LOAD_IMAGE_COLOR);
     arrow_right_tmp = cvLoadImage("./image/arrow_right.png", CV_LOAD_IMAGE_COLOR);
     arrow_up_tmp = cvLoadImage("./image/arrow_up.png", CV_LOAD_IMAGE_COLOR);
     arrow_down_tmp = cvLoadImage("./image/arrow_down.png", CV_LOAD_IMAGE_COLOR);
+    arrow_left_hit_tmp = cvLoadImage("./image/arrow_left_hit.png", CV_LOAD_IMAGE_COLOR);
+    arrow_right_hit_tmp = cvLoadImage("./image/arrow_right_hit.png", CV_LOAD_IMAGE_COLOR);
+    arrow_up_hit_tmp = cvLoadImage("./image/arrow_up_hit.png", CV_LOAD_IMAGE_COLOR);
+    arrow_down_hit_tmp = cvLoadImage("./image/arrow_down_hit.png", CV_LOAD_IMAGE_COLOR);
     resize(arrow_left_tmp, arrow_left, Size(ARROW_SIDE, ARROW_SIDE));
     resize(arrow_right_tmp, arrow_right, Size(ARROW_SIDE, ARROW_SIDE));
     resize(arrow_up_tmp, arrow_up, Size(ARROW_SIDE, ARROW_SIDE));
     resize(arrow_down_tmp, arrow_down, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_left_hit_tmp, arrow_left_hit, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_right_hit_tmp, arrow_right_hit, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_up_hit_tmp, arrow_up_hit, Size(ARROW_SIDE, ARROW_SIDE));
+    resize(arrow_down_hit_tmp, arrow_down_hit, Size(ARROW_SIDE, ARROW_SIDE));
+    
+    flip(arrow_up, arrow_up, 0);
+    flip(arrow_down, arrow_down, 0);
+    flip(arrow_up_hit, arrow_up_hit, 0);
+    flip(arrow_down_hit, arrow_down_hit, 0);
 }
 
 void readParameters(const char* fileName, Mat& cm, Mat& dc){

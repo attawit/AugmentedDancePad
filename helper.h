@@ -4,9 +4,10 @@ float squareSize = 5;
 
 
 float timer(){
-    clock_t t = clock();
-    float now = float(t)/CLOCKS_PER_SEC;
-    return now-timer_start-TIME_PREPARATION;
+//    clock_t t = clock();
+    chrono::time_point<std::chrono::system_clock> now = chrono::system_clock::now();//float(t)/CLOCKS_PER_SEC;
+    chrono::duration<double> elapsed_seconds = now - timer_start;
+    return elapsed_seconds.count() - TIME_PREPARATION;
 }
 
 float get_vel_length(Point2f point){
@@ -98,22 +99,16 @@ void overlay(Mat& foreground, Mat& background, int x, int y, int width, int heig
 }
 
 void start_pattern(Mat& image){
-    for (int i = 1; i <= NUM_CELLS ; i++) {
-        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
-    }
-    
-    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
-    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
     
     float time_now = timer();
-    //cout << "time now: " << time_now << endl;
+    cout << "time now: " << time_now << endl;
     if (time_now > 0) {
         line_color = Scalar(0, 255, 0);
     }
     // for each line of the pattern
-    float total_distance = image.rows-finish_line_padding;
+    //float total_distance = ;
     for (int i = 0; i < patterns.size(); i++) {
-        float distance = (timer() - times[i]) * (ARROW_SIDE) + total_distance;
+        float distance = (timer() - times[i]) * (ARROW_SIDE) + image.rows*PATTERN_HIT_LINE_RATIO;
         
         // if it's not the turn to show up for the rest, just break the loop
         if (distance - start_line_padding < 0)
@@ -121,24 +116,60 @@ void start_pattern(Mat& image){
         
         // if it's already finished, just skip it to conitue
         if (distance > image.rows-finish_line_padding) {
+            //cout << "disappear: " << i << endl;
             continue;
         }
         
+        float lower_bound = image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND;
+        float upper_bound = image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND;
+        
+        // if one roi is hit and there is a corresponding pattern falling in the bound
+        // left
         if (patterns[i][0] == 1) {
-            overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            if (stop_left && distance >= lower_bound && distance < upper_bound) {
+                overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                patterns[i][0] = 2;
+            }else{
+                overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            }
+        }else if(patterns[i][0] == 2){
+            overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][1] == 1) {
-            overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            if (stop_front && distance >= lower_bound && distance < upper_bound) {
+                overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                patterns[i][1] = 2;
+            }else{
+                overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            }
+        }else if(patterns[i][1] == 2){
+            overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*2*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][2] == 1) {
-            overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            if (stop_back && distance >= lower_bound && distance < upper_bound) {
+                overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                patterns[i][2] = 2;
+            }else{
+                overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            }
+        }else if(patterns[i][2] == 2){
+            overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][3] == 1) {
-            overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            if (stop_right && distance >= lower_bound && distance < upper_bound) {
+                overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                patterns[i][3] = 2;
+            }else{
+                overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            }
+        }else if(patterns[i][3] == 2){
+            overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*4*image.cols/(NUM_CELLS+1)-ARROW_SIDE/2), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
+
+        
         
     }
 }
