@@ -55,15 +55,6 @@ float zFar = 500;
 // boolean flag
 bool start_play = false;
 
-bool move_front = false;
-bool move_back = false;
-bool move_left = false;
-bool move_right = false;
-bool stop_front = false;
-bool stop_back = false;
-bool stop_left = false;
-bool stop_right = false;
-
 //ROI of the dance pad's blocks
 Point2f front_bl, front_ur, left_bl, left_ur, right_bl, right_ur, back_bl, back_ur;
 
@@ -108,7 +99,7 @@ void plane_detection();
 /** Implementation **/
 
 void play_music(){
-    std::this_thread::sleep_for (std::chrono::seconds(5));
+    std::this_thread::sleep_for (std::chrono::seconds(TIME_PREPARATION));
     std::cout << "pause of " << TIME_PREPARATION << " seconds ended\n";
     system("afplay ./music/jmww/music.wav");
 }
@@ -655,6 +646,7 @@ void motionDetectionHelper(int id, bool& pre, bool& stop, Point2f v, Point2f rec
 
 void motionDetection(){
     // detect whether there is movement following a stop in each roi
+
     // motionDetectionHelper(move_front, stop_front, front_bl, front_ur);
     // motionDetectionHelper(move_back, stop_back, back_bl, back_ur);
     // motionDetectionHelper(move_left, stop_left, left_bl, left_ur);
@@ -664,6 +656,7 @@ void motionDetection(){
     motionDetectionHelper(2,move_back, stop_back, back_v, back_bl, back_ur);
     motionDetectionHelper(3,move_left, stop_left, left_v, left_bl, left_ur);
     motionDetectionHelper(4,move_right, stop_right, right_v, right_bl, right_ur);
+
 }
 
 void display()
@@ -673,8 +666,23 @@ void display()
     
     cv::Mat tempimage;
     image.copyTo(tempimage);
+    if (image.channels() == 3) {
+        pattern_area = tempimage(Rect(0, 0, image.cols*PATTERN_COL_RATIO, image.rows));
+        pattern_area_bg_color =  Mat(pattern_area.size(), CV_8UC3, cv::Scalar(255, 255, 255));
+        cv::addWeighted(pattern_area_bg_color, pattern_alpha, pattern_area, 1.0 - pattern_alpha , 0.0, pattern_area);
+    }
+    
     line(tempimage, Point(0, 0), Point(0, image.rows), Scalar(255, 0, 0));
     line(tempimage, Point(PATTERN_COL_RATIO*image.cols, 0), Point(PATTERN_COL_RATIO*image.cols, image.rows), Scalar(255, 0, 0));
+    for (int i = 1; i <= NUM_CELLS ; i++) {
+        line(tempimage, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
+    }
+    
+    line(tempimage, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
+    line(tempimage, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
+    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
+    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
+    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
     //flip(image, tempimage, 0);
     
     if(background_image_flag){
@@ -822,7 +830,7 @@ void mouse( int button, int state, int x, int y )
 
 void keyboard( unsigned char key, int x, int y )
 {
-    clock_t t = clock();
+//    clock_t t = clock();
     switch ( key )
     {
         case 'q':
@@ -832,7 +840,8 @@ void keyboard( unsigned char key, int x, int y )
         case 's':
             start_play = !start_play;
             // adjust the the base line of the timer
-            timer_start = float(t)/CLOCKS_PER_SEC;
+            //timer_start = float(t)/CLOCKS_PER_SEC;
+            timer_start = chrono::system_clock::now();
             music_thread = thread(play_music);
             music_thread_id = music_thread.get_id();
             cout << music_thread_id << endl;
@@ -865,6 +874,21 @@ void keyboard( unsigned char key, int x, int y )
             else
                show_of_flag = true;  
             break;
+        case '1':
+            stop_left = true;
+            break;
+        case '2':
+            stop_front = true;
+            break;
+        case '3':
+            stop_back = true;
+            break;
+        case '4':
+            stop_right = true;
+            break;
+        case '0':
+            cout << "oh, hit!" << endl;
+            break;
         default:
             break;
     }
@@ -896,12 +920,10 @@ void idle()
     }
     
     if (start_play) {
+        findLK(image);
+        motionDetection();
         start_pattern(image);
     }
-    
-
-    findLK(image);
-    motionDetection();
 
     cvtColor(image, previous, COLOR_BGR2GRAY);
 }
@@ -939,11 +961,13 @@ int main( int argc, char **argv )
     readPatterns(argv[2], PATTERN_FILE);
     
     //read arrow images
-    readArrows(arrow_up, arrow_down, arrow_left, arrow_right);
+    readArrows(arrow_up, arrow_down, arrow_left, arrow_right, arrow_up_hit, arrow_down_hit, arrow_left_hit, arrow_right_hit);
     
     //read music
     music_file_path = new char[100];
     readMusic(argv[2], music_file_path, MUSIC_FILE);
+    
+    //pattern display area
     
     //initialize background subtractor
     bgs.nmixtures = 5;
