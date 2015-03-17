@@ -664,36 +664,34 @@ void display()
     // clear the window
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    cv::Mat tempimage;
-    image.copyTo(tempimage);
     if (image.channels() == 3) {
-        pattern_area = tempimage(Rect(0, 0, image.cols*PATTERN_COL_RATIO, image.rows));
+        pattern_area = image(Rect(0, 0, image.cols*PATTERN_COL_RATIO, image.rows));
         pattern_area_bg_color =  Mat(pattern_area.size(), CV_8UC3, cv::Scalar(255, 255, 255));
         cv::addWeighted(pattern_area_bg_color, pattern_alpha, pattern_area, 1.0 - pattern_alpha , 0.0, pattern_area);
     }
     
-    line(tempimage, Point(0, 0), Point(0, image.rows), Scalar(255, 0, 0));
-    line(tempimage, Point(PATTERN_COL_RATIO*image.cols, 0), Point(PATTERN_COL_RATIO*image.cols, image.rows), Scalar(255, 0, 0));
+    line(image, Point(0, 0), Point(0, image.rows), Scalar(255, 0, 0));
+    line(image, Point(PATTERN_COL_RATIO*image.cols, 0), Point(PATTERN_COL_RATIO*image.cols, image.rows), Scalar(255, 0, 0));
     for (int i = 1; i <= NUM_CELLS ; i++) {
-        line(tempimage, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
+        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
     }
     
-    line(tempimage, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
-    line(tempimage, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
-    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
-    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
-    line(tempimage, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
-    //flip(image, tempimage, 0);
+    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
+    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
+    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
+    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
+    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
+    //flip(image, image, 0);
     
     if(background_image_flag){
-        cvtColor( background_image, tempimage, CV_GRAY2BGR );
-        //flip(tempimage,tempimage, -1);
+        cvtColor( background_image, image, CV_GRAY2BGR );
+        //flip(image,image, -1);
     }
-        //flip(background_image, tempimage, 0);
+        //flip(background_image, image, 0);
     
     
     glDisable(GL_DEPTH_TEST);
-    //glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //glDrawPixels( image.size().width, image.size().height, GL_BGR, GL_UNSIGNED_BYTE, image.ptr() );
     //alpha blend test start
     if(background_image_flag){
         
@@ -722,7 +720,7 @@ void display()
         glDrawPixels( overlay_test.size().width, overlay_test.size().height, GL_BGRA, GL_UNSIGNED_BYTE, overlay_test.ptr() );
         
     }else{
-        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+        glDrawPixels( image.size().width, image.size().height, GL_BGR, GL_UNSIGNED_BYTE, image.ptr() );
     }
     //alpha blend test end
     glEnable(GL_DEPTH_TEST);
@@ -732,7 +730,7 @@ void display()
     // Here, set up new parameters to render a scene viewed from the camera.
     
     //set viewport
-    glViewport(0, 0, tempimage.size().width, tempimage.size().height);
+    glViewport(0, 0, image.size().width, image.size().height);
     
     //set projection matrix using intrinsic camera params
     glMatrixMode(GL_PROJECTION);
@@ -778,7 +776,7 @@ void display()
     
 
     glDisable(GL_DEPTH_TEST);
-    //glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //glDrawPixels( image.size().width, image.size().height, GL_BGR, GL_UNSIGNED_BYTE, image.ptr() );
     //alpha blend test start
     if(background_image_flag){
         glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
@@ -798,7 +796,7 @@ void display()
    
     }else{
 
-        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+        glDrawPixels( image.size().width, image.size().height, GL_BGR, GL_UNSIGNED_BYTE, image.ptr() );
     }
     // if(show_of_flag){
 
