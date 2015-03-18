@@ -13,7 +13,7 @@
 
 #define NUM_CELLS 4
 #define ARROW_SIDE 40.0
-#define PATTERN_COL_RATIO 0.25
+#define PATTERN_COL_RATIO 0.20
 #define PATTERN_HIT_LINE_RATIO 0.80
 #define PATTERN_HIT_BOUND 20.0
 #define PATTERN_TIME_UNIT 0.33
@@ -41,7 +41,7 @@ bool stop_back = false;
 bool stop_left = false;
 bool stop_right = false;
 
-Scalar line_color(255, 0, 0);
+Scalar line_color(150, 150, 150);
 
 chrono::time_point<chrono::system_clock> timer_start;
 //float timer_start = 0.0;
