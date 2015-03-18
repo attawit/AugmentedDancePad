@@ -79,7 +79,8 @@ int of_threshold = 15;
 thread music_thread;
 thread::id music_thread_id;
 char* music_file_path;
-
+int max_combo = 0;
+int hit_num = 0;
 
 /** Declaration **/
 // the thread function to play music
@@ -737,6 +738,7 @@ void motionDetectionHelper(int id, bool& pre, bool& stop, Point2f v, Point2f rec
                 }else{
                     pre = false;
                     stop = true;
+                    hit_num ++;
                     //cout<<"HIT!"<<endl;
                 }
             // }else{
@@ -1078,7 +1080,43 @@ void idle()
       std::string s = std::to_string((int)ceil(abs(timer())));
       char const *pchar = s.c_str();  //use char const* as target type
       cvPutText(ipltemp, pchar, cvPoint(width/2-80,height/2+100), &font, cvScalar(255,255,255));
+      CvFont font2;
+      cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
+      cvPutText(ipltemp, "READY", cvPoint(20,45), &font2, cvScalar(255,255,255));
+      CvFont font3;
+      cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
+      cvPutText(ipltemp, "HIT", cvPoint(20,height-60), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
+      std::string s2 = std::to_string(hit_num);
+      char const *pchar2 = s2.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar2, cvPoint(210,height-60), &font3, cvScalar(255,255,255));
+      std::string s3 = std::to_string(max_combo);
+      char const *pchar3 = s3.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar3, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
       image = cv::Mat(ipltemp);
+
+    }
+
+    if(start_play&&timer()>0){
+      IplImage* ipltemp;
+      ipltemp = cvCreateImage(cvSize(image.cols, image.rows),8,3);
+      IplImage iplt = image;
+      cvCopy(&iplt, ipltemp);
+      CvFont font2;
+      cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
+      cvPutText(ipltemp, "START", cvPoint(20,45), &font2, cvScalar(255,255,255));
+      CvFont font3;
+      cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
+      cvPutText(ipltemp, "HIT", cvPoint(20,height-60), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
+      std::string s = std::to_string(hit_num);
+      char const *pchar = s.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar, cvPoint(210,height-60), &font3, cvScalar(255,255,255));
+      std::string s2 = std::to_string(max_combo);
+      char const *pchar2 = s2.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar2, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
+      image = cv::Mat(ipltemp);
+
     }
 
     flip(image, image, 0);
@@ -1158,7 +1196,8 @@ int main( int argc, char **argv )
     //initialize background subtractor
     bgs.nmixtures = 5;
     bgs.history = 1000;
-    bgs.varThresholdGen = 15;
+    bgs.varThresholdGen = 4;
+    bgs.backgroundRatio = 0.1;
     bgs.bShadowDetection = true;
     bgs.nShadowDetection = 0;
     bgs.fTau = 0.5;
