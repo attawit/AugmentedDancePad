@@ -152,7 +152,7 @@ void get_velocity(void){//use the result of LK
   back_count = 0;
   middle_count = 0;
   //back_count2 = 0;
-  Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-30.0f);
+  Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-20.0f);
   Point2f new_left_ur = Point2f(left_ur.x-20.0f,left_ur.y);
   Point2f new_right_bl = Point2f(right_bl.x+20.0f, right_bl.y);
   Point2f new_back_bl = Point2f(back_bl.x,back_bl.y);
