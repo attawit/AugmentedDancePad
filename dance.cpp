@@ -1119,7 +1119,7 @@ void idle()
       cvPutText(ipltemp, "/", cvPoint(width - 80, 60), &font4, cvScalar(255,255,255));
       std::string s2 = std::to_string(total_hit);
       char const *pchar2 = s2.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar2, cvPoint(width - 65, 60), &font4, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar2, cvPoint(width - 60, 60), &font4, cvScalar(255,255,255));
       cvPutText(ipltemp, "COMBO:", cvPoint(width - 280,90), &font4, cvScalar(255,255,255));
       std::string s3 = std::to_string(max_combo);
       char const *pchar3 = s3.c_str();  //use char const* as target type
