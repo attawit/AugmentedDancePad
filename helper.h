@@ -21,6 +21,11 @@ void matConvertToIplImage(Mat& mat, CvArr* ipl){
     
 }
 
+void IplImageConvertToMat(Mat& mat, IplImage* ipl){
+    mat = cv::Mat(ipl);
+    
+}
+
 void snapshot(int windowWidth, int windowHeight, const char* filename){
     cv::Mat img(windowHeight, windowWidth, CV_8UC3);
     //use fast 4-byte alignment (default anyway) if possible
