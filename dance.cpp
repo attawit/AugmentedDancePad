@@ -1079,17 +1079,17 @@ void idle()
       cvCopy(&iplt, ipltemp);
       std::string s = std::to_string((int)ceil(abs(timer())));
       char const *pchar = s.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar, cvPoint(width/2-80,height/2+100), &font, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar, cvPoint(width-250,250), &font, cvScalar(255,255,255));
       CvFont font2;
       cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
       cvPutText(ipltemp, "READY", cvPoint(20,height-30), &font2, cvScalar(255,255,255));
       CvFont font3;
       cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
-      cvPutText(ipltemp, "HIT", cvPoint(width - 200,60), &font3, cvScalar(255,255,255));
+      //cvPutText(ipltemp, "HIT", cvPoint(width - 200,60), &font3, cvScalar(255,255,255));
       //cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
       std::string s2 = std::to_string(hit_num);
       char const *pchar2 = s2.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar2, cvPoint(width - 100, 60), &font3, cvScalar(255,255,255));
+      //cvPutText(ipltemp, pchar2, cvPoint(width - 100, 60), &font3, cvScalar(255,255,255));
       //std::string s3 = std::to_string(max_combo);
       //char const *pchar3 = s3.c_str();  //use char const* as target type
       //cvPutText(ipltemp, pchar3, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
@@ -1106,12 +1106,13 @@ void idle()
       cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
       cvPutText(ipltemp, "START", cvPoint(20,height-40), &font2, cvScalar(255,255,255));
       CvFont font3;
-      cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
-      cvPutText(ipltemp, "HIT", cvPoint(width - 200,60), &font3, cvScalar(255,255,255));
+      cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 2.0, 2.0, 0, 3, 8);
+      cvPutText(ipltemp, "HIT:", cvPoint(width - 280,60), &font3, cvScalar(255,255,255));
       //cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
       std::string s = std::to_string(hit_num);
       char const *pchar = s.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar, cvPoint(width - 100, 60), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar, cvPoint(width - 80, 60), &font3, cvScalar(255,255,255));
+
       //std::string s2 = std::to_string(max_combo);
       //char const *pchar2 = s2.c_str();  //use char const* as target type
       //cvPutText(ipltemp, pchar2, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
