@@ -137,6 +137,7 @@ void start_pattern(Mat& image){
             if (stop_left && distance >= lower_bound && distance < upper_bound) {
                 overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][0] = 2;
+                hit_num++;
             }else{
                 overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -148,6 +149,7 @@ void start_pattern(Mat& image){
             if (stop_front && distance >= lower_bound && distance < upper_bound) {
                 overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][1] = 2;
+                hit_num++;
             }else{
                 overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -159,6 +161,7 @@ void start_pattern(Mat& image){
             if (stop_back && distance >= lower_bound && distance < upper_bound) {
                 overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][2] = 2;
+                hit_num++;
             }else{
                 overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -170,6 +173,7 @@ void start_pattern(Mat& image){
             if (stop_right && distance >= lower_bound && distance < upper_bound) {
                 overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2)), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][3] = 2;
+                hit_num++;
             }else{
                 overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }

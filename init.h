@@ -41,6 +41,8 @@ bool stop_back = false;
 bool stop_left = false;
 bool stop_right = false;
 
+int total_hit = 0;
+
 Scalar line_color(150, 150, 150);
 
 chrono::time_point<chrono::system_clock> timer_start;
@@ -67,6 +69,9 @@ void readPatterns(const char* dir, const char* file_name){
         for (int i = 0; i < NUM_CELLS; i++){
             buffer >> number;
             pattern.push_back(number);
+            if (number == 1) {
+                total_hit++;
+            }
         }
         buffer >> time;
         times.push_back(time);
