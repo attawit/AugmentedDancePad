@@ -125,6 +125,15 @@ void start_pattern(Mat& image){
         // if it's already finished, just skip it to conitue
         if (distance+ARROW_SIDE/2 > image.rows-finish_line_padding) {
             //cout << "disappear: " << i << endl;
+            if (patterns[i][0] == 1
+                || patterns[i][1] == 1
+                || patterns[i][2] == 1
+                || patterns[i][3] == 1) {
+                max_combo = 0;
+            }
+            patterns.erase(pattern.begin()+i);
+            times.erase(times.begin()+i);
+            i--;
             continue;
         }
         
@@ -138,6 +147,7 @@ void start_pattern(Mat& image){
                 overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][0] = 2;
                 hit_num++;
+                max_combo++;
             }else{
                 overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -150,6 +160,7 @@ void start_pattern(Mat& image){
                 overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][1] = 2;
                 hit_num++;
+                max_combo++;
             }else{
                 overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -162,6 +173,7 @@ void start_pattern(Mat& image){
                 overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][2] = 2;
                 hit_num++;
+                max_combo++;
             }else{
                 overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
@@ -174,6 +186,7 @@ void start_pattern(Mat& image){
                 overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2)), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][3] = 2;
                 hit_num++;
+                max_combo++;
             }else{
                 overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }

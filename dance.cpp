@@ -79,8 +79,6 @@ int of_threshold = 15;
 thread music_thread;
 thread::id music_thread_id;
 char* music_file_path;
-int max_combo = 0;
-
 
 /** Declaration **/
 // the thread function to play music
@@ -152,7 +150,7 @@ void get_velocity(void){//use the result of LK
   back_count = 0;
   middle_count = 0;
   //back_count2 = 0;
-  Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-20.0f);
+  Point2f new_front_ur = Point2f(front_ur.x,front_ur.y-10.0f);
   Point2f new_left_ur = Point2f(left_ur.x-20.0f,left_ur.y);
   Point2f new_right_bl = Point2f(right_bl.x+20.0f, right_bl.y);
   Point2f new_back_bl = Point2f(back_bl.x,back_bl.y);
@@ -201,7 +199,6 @@ void get_velocity(void){//use the result of LK
   if(back_count!=0){
     back_v.x /= back_count;
     back_v.y /= back_count;
-    cout<<"back_y"<<back_v.y<<endl;
   }
   if(left_count!=0){
     left_v.x /= left_count;
@@ -756,8 +753,10 @@ void motionDetectionHelper(int id, bool& pre, bool& stop, Point2f v, Point2f rec
             }
         }
       }else if(id==1){
+
+       //cout<<"front v"<<get_vel_length(velocity)<<endl;
         if(velocity.y < 0){
-         if (get_vel_length(velocity) > VELOCITY_THRESHOLD) {
+         if (get_vel_length(velocity) > VELOCITY_THRESHOLD*0.7) {
                 // if it's moving, set pre_front for the next frame
                 pre = true;
             }
@@ -990,6 +989,8 @@ void mouse( int button, int state, int x, int y )
 void keyboard( unsigned char key, int x, int y )
 {
 //    clock_t t = clock();
+    std::string s = std::to_string(timer())+".bmp";
+    char const *pchar = s.c_str();
     switch ( key )
     {
         case 'q':
@@ -1019,7 +1020,8 @@ void keyboard( unsigned char key, int x, int y )
                 plane_detection_flag = true;
             break;
         case 'x':
-            snapshot(image.size().width,image.size().height,snap_name);
+            
+            snapshot(image.size().width,image.size().height,pchar);
             break;
         case 'f':
             if(needToInit)
@@ -1111,11 +1113,23 @@ void idle()
       //cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
       std::string s = std::to_string(hit_num);
       char const *pchar = s.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar, cvPoint(width - 80, 60), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar, cvPoint(width - 150, 60), &font3, cvScalar(204.0, 255.0, 153.0));
+      CvFont font4;
+      cvInitFont(&font4, CV_FONT_HERSHEY_COMPLEX, 1.0, 1.0, 0, 3, 8);
+      cvPutText(ipltemp, "/", cvPoint(width - 80, 60), &font4, cvScalar(255,255,255));
+      std::string s2 = std::to_string(total_hit);
+      char const *pchar2 = s2.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar2, cvPoint(width - 65, 60), &font4, cvScalar(255,255,255));
+      cvPutText(ipltemp, "COMBO:", cvPoint(width - 280,90), &font4, cvScalar(255,255,255));
+      std::string s3 = std::to_string(max_combo);
+      char const *pchar3 = s3.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar3, cvPoint(width - 70, 90), &font4, cvScalar(255,255,255));
 
-      //std::string s2 = std::to_string(max_combo);
-      //char const *pchar2 = s2.c_str();  //use char const* as target type
-      //cvPutText(ipltemp, pchar2, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, "MAX COMBO:", cvPoint(width - 280,120), &font4, cvScalar(255,255,255));
+      std::string s4 = std::to_string(max_max_combo);
+      char const *pchar4 = s4.c_str();  //use char const* as target type
+      cvPutText(ipltemp, pchar4, cvPoint(width - 70, 120), &font4, cvScalar(255,255,255));
+
       image = cv::Mat(ipltemp);
 
     }

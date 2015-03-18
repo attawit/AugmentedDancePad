@@ -43,6 +43,8 @@ bool stop_right = false;
 
 int total_hit = 0;
 int hit_num = 0;
+int max_combo = 0;
+int max_max_combo = 0;
 
 Scalar line_color(150, 150, 150);
 
