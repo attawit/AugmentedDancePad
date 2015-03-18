@@ -37,9 +37,12 @@ void snapshot(int windowWidth, int windowHeight, const char* filename){
     Mat flipped;
     cv::flip(img, flipped, 0);
     //imwrite(filename, flipped);
-    IplImage* temp;
-    matConvertToIplImage(flipped, temp);
-    cvSaveImage(filename, temp);
+    IplImage* ipl = cvCreateImage(cvSize(flipped.cols, flipped.rows),8,3);
+    IplImage ipltemp = flipped;
+    cvCopy(&ipltemp, ipl);
+    //IplImage* temp;
+    //matConvertToIplImage(flipped, ipl);
+    cvSaveImage(filename, ipl);
 }
 
 void showCorners()
