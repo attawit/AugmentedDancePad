@@ -14,7 +14,7 @@
 #define NUM_CELLS 4
 #define ARROW_SIDE 40.0
 #define PATTERN_COL_RATIO 0.20
-#define PATTERN_HIT_LINE_RATIO 0.80
+#define PATTERN_HIT_LINE_RATIO 0.75
 #define PATTERN_HIT_BOUND 20.0
 #define PATTERN_TIME_UNIT 0.33
 #define TIME_PREPARATION 5
@@ -28,8 +28,8 @@ vector<float> times;
 // pattern display
 Mat arrow_left, arrow_right, arrow_up, arrow_down, arrow_left_hit, arrow_right_hit, arrow_up_hit, arrow_down_hit;
 Mat pattern_area, pattern_area_bg_color;
-double start_line_padding = 100.0;
-double finish_line_padding = 50.0;
+double start_line_padding = 80.0;
+double finish_line_padding = 80.0;
 double pattern_alpha = 0.3;
 
 bool move_front = false;

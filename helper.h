@@ -101,7 +101,7 @@ void overlay(Mat& foreground, Mat& background, int x, int y, int width, int heig
 void start_pattern(Mat& image){
     
     float time_now = timer();
-    cout << "time now: " << time_now << endl;
+    //cout << "time now: " << time_now << endl;
     if (time_now > 0) {
         line_color = Scalar(153, 255, 255);
     }
@@ -111,11 +111,11 @@ void start_pattern(Mat& image){
         float distance = (timer() - times[i]) * (ARROW_SIDE) + image.rows*PATTERN_HIT_LINE_RATIO;
         
         // if it's not the turn to show up for the rest, just break the loop
-        if (distance - start_line_padding < 0)
+        if (distance-ARROW_SIDE/2 < start_line_padding)
             break;
         
         // if it's already finished, just skip it to conitue
-        if (distance > image.rows-finish_line_padding) {
+        if (distance+ARROW_SIDE/2 > image.rows-finish_line_padding) {
             //cout << "disappear: " << i << endl;
             continue;
         }
@@ -127,46 +127,46 @@ void start_pattern(Mat& image){
         // left
         if (patterns[i][0] == 1) {
             if (stop_left && distance >= lower_bound && distance < upper_bound) {
-                overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][0] = 2;
             }else{
-                overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_left, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
         }else if(patterns[i][0] == 2){
-            overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_left_hit, image, (int)(PATTERN_COL_RATIO*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][1] == 1) {
             if (stop_front && distance >= lower_bound && distance < upper_bound) {
-                overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][1] = 2;
             }else{
-                overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_up, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
         }else if(patterns[i][1] == 2){
-            overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_up_hit, image, (int)(PATTERN_COL_RATIO*3*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][2] == 1) {
             if (stop_back && distance >= lower_bound && distance < upper_bound) {
-                overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][2] = 2;
             }else{
-                overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_down, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
         }else if(patterns[i][2] == 2){
-            overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_down_hit, image, (int)(PATTERN_COL_RATIO*5*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
         
         if (patterns[i][3] == 1) {
             if (stop_right && distance >= lower_bound && distance < upper_bound) {
-                overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2)), (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2)), (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
                 patterns[i][3] = 2;
             }else{
-                overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+                overlay(arrow_right, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
             }
         }else if(patterns[i][3] == 2){
-            overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance), (int)ARROW_SIDE, (int)ARROW_SIDE);
+            overlay(arrow_right_hit, image, (int)(PATTERN_COL_RATIO*7*image.cols/(NUM_CELLS*2))-ARROW_SIDE/2, (int)(distance-ARROW_SIDE/2), (int)ARROW_SIDE, (int)ARROW_SIDE);
         }
 
         
