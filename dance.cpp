@@ -738,7 +738,7 @@ void motionDetectionHelper(int id, bool& pre, bool& stop, Point2f v, Point2f rec
                 }else{
                     pre = false;
                     stop = true;
-                    hit_num ++;
+                    //hit_num ++;
                     //cout<<"HIT!"<<endl;
                 }
             // }else{
@@ -822,8 +822,8 @@ void display()
         line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), Scalar(60, 60, 60), 3);
         
         Mat hit_area = image(Rect(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND, image.cols*PATTERN_COL_RATIO, 2*PATTERN_HIT_BOUND));
-        Mat hit_area_color =  Mat(hit_area.size(), CV_8UC3, cv::Scalar(60, 60, 60));
-        cv::addWeighted(hit_area_color, 0.3, hit_area, 0.7 , 0.0, hit_area);
+        Mat hit_area_color =  Mat(hit_area.size(), CV_8UC3, cv::Scalar(50, 50, 50));
+        cv::addWeighted(hit_area_color, 0.4, hit_area, 0.6 , 0.0, hit_area);
 //        line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
         line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
         line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
@@ -1082,17 +1082,17 @@ void idle()
       cvPutText(ipltemp, pchar, cvPoint(width/2-80,height/2+100), &font, cvScalar(255,255,255));
       CvFont font2;
       cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
-      cvPutText(ipltemp, "READY", cvPoint(20,45), &font2, cvScalar(255,255,255));
+      cvPutText(ipltemp, "READY", cvPoint(20,height-30), &font2, cvScalar(255,255,255));
       CvFont font3;
       cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
-      cvPutText(ipltemp, "HIT", cvPoint(20,height-60), &font3, cvScalar(255,255,255));
-      cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, "HIT", cvPoint(width - 200,60), &font3, cvScalar(255,255,255));
+      //cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
       std::string s2 = std::to_string(hit_num);
       char const *pchar2 = s2.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar2, cvPoint(210,height-60), &font3, cvScalar(255,255,255));
-      std::string s3 = std::to_string(max_combo);
-      char const *pchar3 = s3.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar3, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar2, cvPoint(width - 100, 60), &font3, cvScalar(255,255,255));
+      //std::string s3 = std::to_string(max_combo);
+      //char const *pchar3 = s3.c_str();  //use char const* as target type
+      //cvPutText(ipltemp, pchar3, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
       image = cv::Mat(ipltemp);
 
     }
@@ -1104,17 +1104,17 @@ void idle()
       cvCopy(&iplt, ipltemp);
       CvFont font2;
       cvInitFont(&font2, CV_FONT_HERSHEY_COMPLEX, 3.5, 0.2, 0, 3, 8);
-      cvPutText(ipltemp, "START", cvPoint(20,45), &font2, cvScalar(255,255,255));
+      cvPutText(ipltemp, "START", cvPoint(20,height-40), &font2, cvScalar(255,255,255));
       CvFont font3;
       cvInitFont(&font3, CV_FONT_HERSHEY_COMPLEX, 0.8, 1.0, 0, 2, 8);
-      cvPutText(ipltemp, "HIT", cvPoint(20,height-60), &font3, cvScalar(255,255,255));
-      cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, "HIT", cvPoint(width - 200,60), &font3, cvScalar(255,255,255));
+      //cvPutText(ipltemp, "MAX COMBO", cvPoint(20,height-30), &font3, cvScalar(255,255,255));
       std::string s = std::to_string(hit_num);
       char const *pchar = s.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar, cvPoint(210,height-60), &font3, cvScalar(255,255,255));
-      std::string s2 = std::to_string(max_combo);
-      char const *pchar2 = s2.c_str();  //use char const* as target type
-      cvPutText(ipltemp, pchar2, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
+      cvPutText(ipltemp, pchar, cvPoint(width - 100, 60), &font3, cvScalar(255,255,255));
+      //std::string s2 = std::to_string(max_combo);
+      //char const *pchar2 = s2.c_str();  //use char const* as target type
+      //cvPutText(ipltemp, pchar2, cvPoint(210,height-30), &font3, cvScalar(255,255,255));
       image = cv::Mat(ipltemp);
 
     }
