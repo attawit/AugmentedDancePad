@@ -79,7 +79,7 @@ int of_threshold = 15;
 thread music_thread;
 thread::id music_thread_id;
 char* music_file_path;
-int max_combo = 0;
+
 int hit_num = 0;
 
 /** Declaration **/
