@@ -790,23 +790,43 @@ void display()
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     if (image.channels() == 3) {
-        pattern_area = image(Rect(0, 0, image.cols*PATTERN_COL_RATIO, image.rows));
-        pattern_area_bg_color =  Mat(pattern_area.size(), CV_8UC3, cv::Scalar(255, 255, 255));
-        cv::addWeighted(pattern_area_bg_color, pattern_alpha, pattern_area, 1.0 - pattern_alpha , 0.0, pattern_area);
+//        pattern_area = image(Rect(0, 0, image.cols*PATTERN_COL_RATIO, image.rows));
+//        pattern_area_bg_color =  Mat(Size(width*PATTERN_COL_RATIO, height), CV_8UC3, cv::Scalar(255, 255, 255));
+//        cv::addWeighted(pattern_area_bg_color, pattern_alpha, pattern_area, 1.0 - pattern_alpha , 0.0, pattern_area);
+        
+//        line(image, Point(0, 0), Point(0, image.rows), Scalar(255, 0, 0));
+//        line(image, Point(PATTERN_COL_RATIO*image.cols, 0), Point(PATTERN_COL_RATIO*image.cols, image.rows), Scalar(255, 0, 0));
+//        for (int i = 1; i <= NUM_CELLS ; i++) {
+//            line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
+//        }
+        
+        Mat left_area = image(Rect(0, 0, image.cols*PATTERN_COL_RATIO/4, image.rows));
+        Mat up_area = image(Rect(image.cols*PATTERN_COL_RATIO*1/4, 0, image.cols*PATTERN_COL_RATIO/4, image.rows));
+        Mat down_area = image(Rect(image.cols*PATTERN_COL_RATIO*2/4, 0, image.cols*PATTERN_COL_RATIO/4, image.rows));
+        Mat right_area = image(Rect(image.cols*PATTERN_COL_RATIO*3/4, 0, image.cols*PATTERN_COL_RATIO/4, image.rows));
+        
+        Mat left_area_color =  Mat(left_area.size(), CV_8UC3, cv::Scalar(153, 153, 255));
+        Mat up_area_color =  Mat(left_area.size(), CV_8UC3, cv::Scalar(153, 255, 255));
+        Mat down_area_color =  Mat(left_area.size(), CV_8UC3, cv::Scalar(255, 153, 153));
+        Mat right_area_color =  Mat(left_area.size(), CV_8UC3, cv::Scalar(153, 255, 204));
+        
+        cv::addWeighted(left_area_color, pattern_alpha, left_area, 1.0 - pattern_alpha , 0.0, left_area);
+        cv::addWeighted(up_area_color, pattern_alpha, up_area, 1.0 - pattern_alpha , 0.0, up_area);
+        cv::addWeighted(down_area_color, pattern_alpha, down_area, 1.0 - pattern_alpha , 0.0, down_area);
+        cv::addWeighted(right_area_color, pattern_alpha, right_area, 1.0 - pattern_alpha , 0.0, right_area);
+        
+        
+        line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), Scalar(60, 60, 60), 3);
+        line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), Scalar(60, 60, 60), 3);
+        
+        Mat hit_area = image(Rect(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND, image.cols*PATTERN_COL_RATIO, 2*PATTERN_HIT_BOUND));
+        Mat hit_area_color =  Mat(hit_area.size(), CV_8UC3, cv::Scalar(60, 60, 60));
+        cv::addWeighted(hit_area_color, 0.3, hit_area, 0.7 , 0.0, hit_area);
+//        line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
+        line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
+        line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
     }
     
-    line(image, Point(0, 0), Point(0, image.rows), Scalar(255, 0, 0));
-    line(image, Point(PATTERN_COL_RATIO*image.cols, 0), Point(PATTERN_COL_RATIO*image.cols, image.rows), Scalar(255, 0, 0));
-    for (int i = 1; i <= NUM_CELLS ; i++) {
-        line(image, Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), 0), Point(PATTERN_COL_RATIO*image.cols*i/(NUM_CELLS+1), image.rows), line_color);
-    }
-    
-    line(image, Point(0, start_line_padding), Point(PATTERN_COL_RATIO*image.cols, start_line_padding), line_color);
-    line(image, Point(0, image.rows-finish_line_padding), Point(PATTERN_COL_RATIO*image.cols, image.rows-finish_line_padding), line_color);
-    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO), line_color);
-    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO-PATTERN_HIT_BOUND), line_color);
-    line(image, Point(0, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), Point(PATTERN_COL_RATIO*image.cols, image.rows*PATTERN_HIT_LINE_RATIO+PATTERN_HIT_BOUND), line_color);
-    //flip(image, image, 0);
     
     // if(background_image_flag){
     //     cvtColor( background_image, image, CV_GRAY2BGR );
@@ -874,7 +894,6 @@ void display()
     else{
         glLoadIdentity();
     }
-    gluLookAt(0, 0, 0, 0, 0, -5, 0, 1, 0);  
 
     
     gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
@@ -943,7 +962,6 @@ void display()
 
     //     glDrawPixels( colored_of.size().width, colored_of.size().height, GL_BGR, GL_UNSIGNED_BYTE, colored_of.ptr() );  
     // }
-
     //alpha blend test end
     glEnable(GL_DEPTH_TEST);
 
