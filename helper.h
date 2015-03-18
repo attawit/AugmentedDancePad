@@ -116,7 +116,7 @@ void start_pattern(Mat& image){
     // for each line of the pattern
     //float total_distance = ;
     for (int i = 0; i < patterns.size(); i++) {
-        float distance = (timer() - times[i]) * (ARROW_SIDE) + image.rows*PATTERN_HIT_LINE_RATIO;
+        float distance = (timer() - times[i]) * (ARROW_SIDE*2) + image.rows*PATTERN_HIT_LINE_RATIO;
         
         // if it's not the turn to show up for the rest, just break the loop
         if (distance-ARROW_SIDE/2 < start_line_padding)
