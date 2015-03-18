@@ -14,10 +14,15 @@ float get_vel_length(Point2f point){
     return sqrt(point.x*point.x + point.y*point.y);
 }
 
-void matConvertToIplImage(Mat& mat, IplImage* ipl){
+void matConvertToIplImage(Mat& mat, CvArr* ipl){
     ipl = cvCreateImage(cvSize(mat.cols, mat.rows),8,3);
     IplImage ipltemp = mat;
     cvCopy(&ipltemp, ipl);
+    
+}
+
+void IplImageConvertToMat(Mat& mat, IplImage* ipl){
+    mat = cv::Mat(ipl);
     
 }
 
